@@ -1471,3 +1471,7 @@
 - [x] Prepare the Render-hosted frontend to use the existing Manus backend while preserving v5, AI, database, scanner, tracking, and Telegram ownership on Manus; live Render environment entry remains a user-side step
 - [x] Validate split API routing and add OAuth success-redirect support for the configured frontend origin without changing scanner ownership or Telegram workflow
 - [x] Add split-deployment regression coverage and publish the code-side configuration guidance
+
+- [ ] Finalize Render frontend-only deployment configuration with no Forge server key on Render
+- [ ] Validate split API, OAuth, CORS, and backend ownership boundaries
+- [ ] Run regression/build validation and publish the split-deployment update

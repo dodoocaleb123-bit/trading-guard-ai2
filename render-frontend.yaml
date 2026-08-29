@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: trading-guard-ai-frontend
+    runtime: static
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    staticPublishPath: ./dist/public
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+      - key: VITE_APP_ID
+        value: JPWZdwvyAH9bH5mLVeVheV
+      - key: VITE_OAUTH_PORTAL_URL
+        value: https://manus.im
