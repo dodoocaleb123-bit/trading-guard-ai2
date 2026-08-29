@@ -1472,6 +1472,6 @@
 - [x] Validate split API routing and add OAuth success-redirect support for the configured frontend origin without changing scanner ownership or Telegram workflow
 - [x] Add split-deployment regression coverage and publish the code-side configuration guidance
 
-- [ ] Finalize Render frontend-only deployment configuration with no Forge server key on Render
-- [ ] Validate split API, OAuth, CORS, and backend ownership boundaries
-- [ ] Run regression/build validation and publish the split-deployment update
+- [x] Finalize Render frontend-only deployment configuration with no Forge server key on Render; Static Site Blueprint and settings are published, while creating the Render service remains user-side
+- [x] Validate split API, OAuth, CORS, and backend ownership boundaries; OAuth redirect regression, full deterministic suite, TypeScript, and build passed
+- [x] Run regression/build validation and publish the split-deployment update; published checkpoint 5a23ba76
