@@ -4,6 +4,16 @@ import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
+import { ENV } from "./env";
+
+export function getOAuthSuccessRedirect(frontendOrigin: string): string {
+  if (!frontendOrigin) return "/";
+  try {
+    return new URL("/", frontendOrigin).toString();
+  } catch {
+    return "/";
+  }
+}
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -56,7 +66,7 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      res.redirect(302, "/");
+      res.redirect(302, getOAuthSuccessRedirect(ENV.frontendOrigin));
     } catch (error) {
       console.error("[OAuth] Callback failed", error);
       res.status(500).json({ error: "OAuth callback failed" });

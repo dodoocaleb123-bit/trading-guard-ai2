@@ -1467,3 +1467,7 @@
 - [x] Add a per-asset v5 zone-history dashboard for EUR/USD, XAU/USD, GBP/USD, and BTC/USD across 4H, 1H, 15M, and 5M
 - [x] Add authenticated production smoke validation for each persisted hierarchy and zone-memory payload after scanner cycles
 - [x] Add regression coverage, visual verification, and publish the follow-up release
+
+- [x] Prepare the Render-hosted frontend to use the existing Manus backend while preserving v5, AI, database, scanner, tracking, and Telegram ownership on Manus; live Render environment entry remains a user-side step
+- [x] Validate split API routing and add OAuth success-redirect support for the configured frontend origin without changing scanner ownership or Telegram workflow
+- [x] Add split-deployment regression coverage and publish the code-side configuration guidance

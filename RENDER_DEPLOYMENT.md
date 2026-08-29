@@ -34,3 +34,34 @@ Open `/healthz` and confirm `{ "ok": true }`. Sign in through the Render OAuth c
 ## Important limitation
 
 The current Manus deployment remains live and is not replaced by this configuration. Render is an optional backend deployment path. The safest migration is staged: deploy Render, validate it against the shared database, point the Manus frontend to Render, then move the scanner schedule last.
+
+## Split deployment: Render frontend with Manus backend
+
+If the server-side Forge credential cannot be transferred, Render can host only the built React interface while Manus remains the backend owner. In Render, create a **Static Site** from the same repository rather than a second production backend service.
+
+Use these Static Site settings:
+
+| Setting | Value |
+|---|---|
+| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm build` |
+| Publish directory | `dist/public` |
+| Branch | `main` |
+| Root directory | Blank; use the repository root |
+
+Set these build-time environment variables on the Render Static Site:
+
+```text
+VITE_API_BASE_URL=https://tradingai-jpwzdwvy.manus.space
+VITE_APP_ID=JPWZdwvyAH9bH5mLVeVheV
+VITE_OAUTH_PORTAL_URL=https://manus.im
+```
+
+The Render interface will then send tRPC requests to the Manus backend at `https://tradingai-jpwzdwvy.manus.space/api/trpc`. The existing Manus backend continues to own the database, v5 engine, zone memory, White AI, Cherry AI, scanner, tracking, and Telegram delivery. Do not add `DATABASE_URL`, `BUILT_IN_FORGE_API_KEY`, or Telegram bot tokens to the Render Static Site.
+
+Set the Manus backend’s `FRONTEND_ORIGIN` to the exact Render Static Site URL after Render assigns it. The OAuth callback remains on the Manus backend:
+
+```text
+https://tradingai-jpwzdwvy.manus.space/api/oauth/callback
+```
+
+The backend now redirects successful authentication to the configured `FRONTEND_ORIGIN`. Add the callback URL to the OAuth application’s approved redirect URLs, then test sign-in from the Render Static Site. Keep only the existing Manus scanner schedule active; do not create a Render scanner schedule for this split arrangement.
