@@ -1475,3 +1475,10 @@
 - [x] Finalize Render frontend-only deployment configuration with no Forge server key on Render; Static Site Blueprint and settings are published, while creating the Render service remains user-side
 - [x] Validate split API, OAuth, CORS, and backend ownership boundaries; OAuth redirect regression, full deterministic suite, TypeScript, and build passed
 - [x] Run regression/build validation and publish the split-deployment update; published checkpoint 5a23ba76
+
+- [x] Replace Forge-backed White AI and Cherry AI calls with a secure server-side Google Gemini provider
+- [x] Preserve read-only chat boundaries and leave v5, scanner, tracking, Telegram, and paper-only workflows unchanged
+- [x] Add Gemini error handling, regression coverage, deployment documentation, and Render environment guidance
+- [x] Validate the integration and publish the Gemini replacement release
+
+- [x] Harden Gemini structured-response normalization against intermittent provider wrappers and verify scanner/audit JSON paths with deterministic and live smoke tests

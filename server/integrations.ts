@@ -641,14 +641,30 @@ export type ScannerDecisionCandidate = {
   market: MarketSnapshot;
 };
 
-function parseStructuredContent(content: unknown): any {
+export function parseStructuredContent(content: unknown): any {
   const text = typeof content === "string"
     ? content
     : Array.isArray(content)
       ? content.filter((part: any) => part && part.type === "text" && typeof part.text === "string").map((part: any) => part.text).join("\n")
       : "";
-  if (!text.trim()) return {};
-  return JSON.parse(text);
+  const trimmed = text.trim();
+  if (!trimmed) return {};
+
+  const candidates = [trimmed];
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)?.[1];
+  if (fenced) candidates.push(fenced.trim());
+  const firstObject = trimmed.indexOf("{");
+  const lastObject = trimmed.lastIndexOf("}");
+  if (firstObject >= 0 && lastObject > firstObject) candidates.push(trimmed.slice(firstObject, lastObject + 1));
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // Try the next provider-compatible wrapper shape.
+    }
+  }
+  return {};
 }
 
 export async function generateScannerDecisions(input: { candidates: ScannerDecisionCandidate[]; rules: string }) {
@@ -830,7 +846,7 @@ export async function forensicAnalysis(signal: { asset: string; direction: strin
     },
   });
   const content = response.choices?.[0]?.message?.content;
-    return normalizeForensicFinding(JSON.parse(typeof content === "string" ? content : "{}"));
+    return normalizeForensicFinding(parseStructuredContent(content));
 }
 
 

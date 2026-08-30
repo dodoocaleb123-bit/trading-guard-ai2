@@ -212,15 +212,28 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+const usingGemini = () => Boolean(ENV.geminiApiKey.trim());
+
+const resolveApiUrl = () => {
+  if (usingGemini()) {
+    return `${ENV.geminiApiUrl.replace(/\/$/, "")}/chat/completions`;
+  }
+  return ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
     ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
     : "https://forge.manus.im/v1/chat/completions";
+};
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+  if (usingGemini() || ENV.forgeApiKey) return;
+  throw new Error("No server-side LLM API key is configured");
+};
+
+const resolveModel = (requestedModel?: string): string | undefined => {
+  if (!usingGemini()) return requestedModel;
+  if (!requestedModel || requestedModel.startsWith("gpt-") || requestedModel.startsWith("claude-")) {
+    return ENV.geminiModel;
   }
+  return requestedModel;
 };
 
 const normalizeResponseFormat = ({
@@ -378,8 +391,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     messages: messages.map(normalizeMessage),
   };
 
-  if (model) {
-    payload.model = model;
+  const resolvedModel = resolveModel(model);
+  if (resolvedModel) {
+    payload.model = resolvedModel;
   }
 
   if (tools && tools.length > 0) {
@@ -421,7 +435,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${usingGemini() ? ENV.geminiApiKey : ENV.forgeApiKey}`,
     },
     body: JSON.stringify(payload),
   });
@@ -433,7 +447,15 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     );
   }
 
-  return (await response.json()) as InvokeResult;
+  const result = (await response.json()) as InvokeResult;
+  const message = result.choices?.[0]?.message;
+  const hasContent = typeof message?.content === "string"
+    ? message.content.trim().length > 0
+    : Array.isArray(message?.content) && message.content.length > 0;
+  if (!hasContent && !(message?.tool_calls && message.tool_calls.length > 0)) {
+    throw new Error("LLM invoke returned no assistant content");
+  }
+  return result;
 }
 
 export type ModelInfo = {
@@ -451,12 +473,14 @@ export type ModelsResponse = {
 export async function listLLMModels(): Promise<ModelsResponse> {
   assertApiKey();
 
-  const url = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models`
-    : "https://forge.manus.im/v1/models";
+  const url = usingGemini()
+    ? `${ENV.geminiApiUrl.replace(/\/$/, "")}/models`
+    : ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+      ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models`
+      : "https://forge.manus.im/v1/models";
 
   const response = await fetchWithBackoff(url, {
-    headers: { authorization: `Bearer ${ENV.forgeApiKey}` },
+    headers: { authorization: `Bearer ${usingGemini() ? ENV.geminiApiKey : ENV.forgeApiKey}` },
   });
 
   if (!response.ok) {

@@ -15,7 +15,7 @@ This project can remain live on Manus while its Node/Express backend is deployed
 
 Create a Render Web Service from the GitHub repository and select the repository root. Render can use the checked-in `render.yaml` Blueprint, or the equivalent manual settings: build command `corepack enable && pnpm install --frozen-lockfile && pnpm build`, start command `pnpm start`, and health-check path `/healthz`. Enable automatic deploys from the selected branch.
 
-Add every `sync: false` variable from `render.yaml` in Render’s Environment settings. Copy values from the existing secure Manus configuration; do not commit `.env` files, API keys, bot tokens, database URLs, or JWT secrets to GitHub. The Render service must use the same database and the same Supabase project if both deployments are expected to share data.
+Add every `sync: false` variable from `render.yaml` in Render’s Environment settings. For the external-AI deployment, add `GEMINI_API_KEY` from Google AI Studio and keep it server-side; `GEMINI_API_URL` and `GEMINI_MODEL` are provided by the Blueprint. Do not add `BUILT_IN_FORGE_API_KEY` to Render. Never commit `.env` files, API keys, bot tokens, database URLs, or JWT secrets to GitHub. The Render service must use the same database and the same Supabase project if both deployments are expected to share data.
 
 ## Connect the Manus frontend to Render
 
@@ -37,7 +37,7 @@ The current Manus deployment remains live and is not replaced by this configurat
 
 ## Split deployment: Render frontend with Manus backend
 
-If the server-side Forge credential cannot be transferred, Render can host only the built React interface while Manus remains the backend owner. In Render, create a **Static Site** from the same repository rather than a second production backend service.
+If the server-side Forge credential cannot be transferred, the external-Gemini full-backend path is the recommended Render arrangement. Render can host the complete Node/Express service while Manus remains available as the prior deployment during staged validation. Alternatively, the separate Static Site arrangement below keeps the backend on Manus.
 
 Use these Static Site settings:
 
@@ -56,7 +56,7 @@ VITE_APP_ID=JPWZdwvyAH9bH5mLVeVheV
 VITE_OAUTH_PORTAL_URL=https://manus.im
 ```
 
-The Render interface will then send tRPC requests to the Manus backend at `https://tradingai-jpwzdwvy.manus.space/api/trpc`. The existing Manus backend continues to own the database, v5 engine, zone memory, White AI, Cherry AI, scanner, tracking, and Telegram delivery. Do not add `DATABASE_URL`, `BUILT_IN_FORGE_API_KEY`, or Telegram bot tokens to the Render Static Site.
+The Render interface will then send tRPC requests to the Manus backend at `https://tradingai-jpwzdwvy.manus.space/api/trpc`. The existing Manus backend continues to own the database, v5 engine, zone memory, White AI, Cherry AI, scanner, tracking, and Telegram delivery. Do not add `DATABASE_URL`, `GEMINI_API_KEY`, or Telegram bot tokens to the Render Static Site.
 
 Set the Manus backend’s `FRONTEND_ORIGIN` to the exact Render Static Site URL after Render assigns it. The OAuth callback remains on the Manus backend:
 
