@@ -11,7 +11,6 @@ import { buildIntelligenceModel, buildLessonPromotionPlan, compileExecutableComp
 import { buildReplacementKnowledgeModelV5, evaluateReplacementIntelligence, type ReplacementDecision } from "./replacement-intelligence";
 import { invokeLLM } from "./_core/llm";
 import { fetchOfficialMacroContext } from "./official-macro";
-import { storagePut } from "./storage";
 import { createHeartbeatJob, listHeartbeatJobs } from "./_core/heartbeat";
 import { buildCallbackStatus, selectScannerSchedulerJob } from "./scheduler-status";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -112,7 +111,7 @@ export function formatWhiteAiSignalFallback(signalContext: ReturnType<typeof bui
 }
 import { systemRouter } from "./_core/systemRouter";
 
-export function buildStrategyRuleRecord(input: { userId: number; title: string; sourceType: "pdf" | "docx" | "text"; fileName: string; content: string; storageKey: string; supabaseId: string | null }) {
+export function buildStrategyRuleRecord(input: { userId: number; title: string; sourceType: "pdf" | "docx" | "text"; fileName: string; content: string; storageKey: string | null; supabaseId: string | null }) {
   return { userId: input.userId, title: input.title, sourceType: input.sourceType, sourceFileName: input.fileName, content: input.content, storageKey: input.storageKey, supabaseId: input.supabaseId };
 }
 
@@ -233,9 +232,9 @@ export const appRouter = router({
         const buffer = Buffer.from(input.contentBase64, "base64");
         const content = await extractStrategyText(buffer, input.mimeType, input.fileName);
         if (!content) throw new Error("No readable strategy text was found in this file");
-        const stored = await storagePut(`${ctx.user.id}/strategy-rules/${input.fileName}`, buffer, input.mimeType || "application/octet-stream");
-        const supabase = await mirrorToSupabase("strategy_rules", { title: input.title, content, source_file_name: input.fileName, source_type: input.sourceType, storage_key: stored.key });
-        const rule = await createStrategyRule(buildStrategyRuleRecord({ userId: ctx.user.id, title: input.title, sourceType: input.sourceType, fileName: input.fileName, content, storageKey: stored.key, supabaseId: supabase?.id ? String(supabase.id) : null }));
+        // Persist extracted strategy text and metadata in the database. Binary file storage is optional.
+        const supabase = await mirrorToSupabase("strategy_rules", { title: input.title, content, source_file_name: input.fileName, source_type: input.sourceType, storage_key: null });
+        const rule = await createStrategyRule(buildStrategyRuleRecord({ userId: ctx.user.id, title: input.title, sourceType: input.sourceType, fileName: input.fileName, content, storageKey: null, supabaseId: supabase?.id ? String(supabase.id) : null }));
         await markOnboardingComplete(ctx.user.id);
         return rule;
       }),
