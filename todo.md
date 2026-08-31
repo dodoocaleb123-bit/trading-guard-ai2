@@ -1496,3 +1496,4 @@
 - [x] Reproduce zone detection on real persisted market payloads and verify whether detection, reconciliation, or dashboard retrieval is dropping zones.
 - [x] Correct zone persistence if needed without changing v5 confirmation, risk, timeframe, tracking, or Telegram boundaries, then add regression coverage.
 - [x] Prevent Cherry AI from defaulting non-trade informational questions to BUY/TRADE APPROVED; return grounded informational responses or request a complete trade setup.
+- [x] Add a dedicated read-only Monitoring tab to the left navigation for continuous scanner, v5, zone, Entry Locator, Telegram, and tracking health.

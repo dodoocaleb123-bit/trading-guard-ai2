@@ -18,6 +18,7 @@ function Router() {
       <Route path={"/strategy-rules"} component={Home} />
       <Route path={"/trade-history"} component={Home} />
       <Route path={"/scanner"} component={Home} />
+      <Route path={"/monitoring"} component={Home} />
       <Route path={"/winning-rate"} component={Home} />
       <Route path={"/best-time-to-trade"} component={Home} />
       <Route path={"/best-days-to-trade"} component={Home} />

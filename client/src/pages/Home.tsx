@@ -2697,6 +2697,29 @@ function V5ZoneMap() {
   );
 }
 
+function MonitoringPage() {
+  return (
+    <>
+      <PageHeading
+        eyebrow="Continuous observability"
+        title="Monitoring"
+        description="A read-only control room for scanner cadence, market-data availability, v5 hierarchy persistence, zones, and signal-path health. Monitoring never changes v5 decisions or Telegram delivery."
+        action={<Badge variant="outline" className="w-fit border-primary/25 text-primary">LIVE · REFRESH 1 MIN</Badge>}
+      />
+      <div className="mb-6 grid gap-3 md:grid-cols-3">
+        <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">What this watches</p><p className="mt-2 text-sm leading-6">Scheduler callbacks, five-minute freshness, provider availability, and complete hierarchy payloads.</p></CardContent></Card>
+        <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Decision boundary</p><p className="mt-2 text-sm leading-6">4H bias, 1H context, and independent 15M/5M execution remain owned by v5.</p></CardContent></Card>
+        <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Delivery boundary</p><p className="mt-2 text-sm leading-6">Telegram is attempted only after a qualified v5 plan and Entry Locator emission.</p></CardContent></Card>
+      </div>
+      <CallbackStatusCard />
+      <ScannerCadenceDiagnostics />
+      <V5SmokeStatusCard />
+      <V5DecisionTrend />
+      <V5ZoneMap />
+    </>
+  );
+}
+
 function ScannerPage() {
   const settings = trpc.scanner.status.useQuery(undefined, LIVE_QUERY_OPTIONS);
   const health = trpc.scanner.health.useQuery(undefined, LIVE_QUERY_OPTIONS);
@@ -4011,6 +4034,8 @@ export default function Home() {
       <TradeHistory />
     ) : path === "/scanner" ? (
       <ScannerPage />
+    ) : path === "/monitoring" ? (
+      <MonitoringPage />
     ) : path === "/winning-rate" ? (
       <WinningRatePage />
     ) : path === "/best-time-to-trade" ? (

@@ -83,10 +83,10 @@ describe("dashboard terminology", () => {
     expect(homeSource).toContain("Telegram is only attempted after v5 qualifies");
   });
 
-  it("mounts the compact production timeline on the Scanner page", () => {
+  it("mounts the compact production timeline on the Scanner page and callback health on Monitoring", () => {
     expect(homeSource).toContain("<ScannerCadenceDiagnostics />");
-    expect(homeSource).not.toContain("<CallbackStatusCard />");
-    expect(homeSource).not.toContain("Recent app-side run history");
+    expect(homeSource).toContain("<CallbackStatusCard />");
+    expect(homeSource).toContain("<MonitoringPage />");
     expect(homeSource).not.toContain("Activate 5-min schedule");
     expect(homeSource).toContain("External scheduler controls the collection cadence");
   });
