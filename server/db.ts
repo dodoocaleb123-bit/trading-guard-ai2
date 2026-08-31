@@ -704,6 +704,36 @@ export async function listStrategyDecisions(userId: number, filters: DecisionFil
   return filterStrategyDecisions(rows, filters);
 }
 
+const DASHBOARD_EVIDENCE_PREVIEW_CHARS = 12_000;
+const DASHBOARD_FINDINGS_PREVIEW_CHARS = 8_000;
+const DASHBOARD_SNAPSHOT_PREVIEW_CHARS = 16_000;
+const DASHBOARD_REASON_PREVIEW_CHARS = 4_000;
+
+export async function listStrategyDecisionsForDashboard(userId: number, filters: DecisionFilters = {}) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({
+    id: strategyDecisionLedger.id,
+    userId: strategyDecisionLedger.userId,
+    asset: strategyDecisionLedger.asset,
+    timeframe: strategyDecisionLedger.timeframe,
+    verdict: strategyDecisionLedger.verdict,
+    confidence: strategyDecisionLedger.confidence,
+    confluenceScore: strategyDecisionLedger.confluenceScore,
+    ruleEvidence: sql<string | null>`LEFT(${strategyDecisionLedger.ruleEvidence}, ${DASHBOARD_EVIDENCE_PREVIEW_CHARS})`.as("ruleEvidence"),
+    ruleFindings: sql<string | null>`LEFT(${strategyDecisionLedger.ruleFindings}, ${DASHBOARD_FINDINGS_PREVIEW_CHARS})`.as("ruleFindings"),
+    marketSnapshot: sql<string | null>`LEFT(${strategyDecisionLedger.marketSnapshot}, ${DASHBOARD_SNAPSHOT_PREVIEW_CHARS})`.as("marketSnapshot"),
+    generatedDirection: strategyDecisionLedger.generatedDirection,
+    generatedEntry: strategyDecisionLedger.generatedEntry,
+    generatedStopLoss: strategyDecisionLedger.generatedStopLoss,
+    generatedTakeProfit: strategyDecisionLedger.generatedTakeProfit,
+    decisionReason: sql<string | null>`LEFT(${strategyDecisionLedger.decisionReason}, ${DASHBOARD_REASON_PREVIEW_CHARS})`.as("decisionReason"),
+    cooldownKey: strategyDecisionLedger.cooldownKey,
+    createdAt: strategyDecisionLedger.createdAt,
+  }).from(strategyDecisionLedger).where(eq(strategyDecisionLedger.userId, userId)).orderBy(desc(strategyDecisionLedger.createdAt)).limit(SCANNER_DASHBOARD_LIMIT);
+  return filterStrategyDecisions(rows, filters);
+}
+
 export async function getV5HierarchySmokeStatus(userId: number, lookbackMinutes = 30) {
   const db = await getDb();
   if (!db) return { ok: false, reason: "Database is unavailable.", checkedDecisions: 0, qualified: 0, waiting: 0, actualRatios: [], latestCycleAt: null as Date | null, payloadChecks: [], zoneInventory: { total: 0, active: 0, weakened: 0, invalidated: 0 } };
