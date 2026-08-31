@@ -69,7 +69,10 @@ export function reconcileZoneMemory(input: {
   candleAt: Date | string;
   observedAt: Date | string;
 }) {
-  const observed = input.observed.filter((zone) => zone.timeframe === input.timeframe);
+  const expectedTimeframe = input.timeframe.toUpperCase();
+  const observed = input.observed
+    .filter((zone) => zone.timeframe.toUpperCase() === expectedTimeframe)
+    .map((zone) => ({ ...zone, timeframe: input.timeframe }));
   const used = new Set<number>();
   const next: PersistedZoneMemory[] = [];
 
@@ -115,5 +118,6 @@ export function reconcileZoneMemory(input: {
 
 export function toWorkflowZone(record: Pick<PersistedZoneMemory, "zoneKind" | "lower" | "upper" | "reactions" | "displacement" | "fresh" | "weakFor" | "timeframe" | "lifecycle">): WorkflowZone | null {
   if (record.lifecycle === "INVALIDATED") return null;
-  return { kind: record.zoneKind, lower: numeric(record.lower), upper: numeric(record.upper), reactions: numeric(record.reactions), displacement: numeric(record.displacement), fresh: Boolean(record.fresh), weakFor: record.weakFor ? record.weakFor.split(",").filter((value): value is "BUY" | "SELL" => value === "BUY" || value === "SELL") : [], timeframe: record.timeframe };
+  const displacement = numeric(record.displacement);
+  return { kind: record.zoneKind, lower: numeric(record.lower), upper: numeric(record.upper), reactions: numeric(record.reactions), displacement, fresh: Boolean(record.fresh), weakFor: record.weakFor ? record.weakFor.split(",").filter((value): value is "BUY" | "SELL" => value === "BUY" || value === "SELL") : [], timeframe: record.timeframe, source: displacement === 0 ? "STRUCTURAL" : "DISPLACEMENT" };
 }

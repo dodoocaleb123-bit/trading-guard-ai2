@@ -1492,6 +1492,6 @@
 - [x] Verify split Supabase bearer authentication and backend route handling after the 502 fix.
 - [x] Re-run production Scanner, v5 smoke, zone inventory, White AI, Cherry AI, tracking, and Telegram checks for a clean pass.
 
-- [ ] Diagnose why the v5 persistent zone inventory shows zero zones for every asset and timeframe despite incoming market data.
-- [ ] Reproduce zone detection on real persisted market payloads and verify whether detection, reconciliation, or dashboard retrieval is dropping zones.
-- [ ] Correct zone persistence if needed without changing v5 confirmation, risk, timeframe, tracking, or Telegram boundaries, then add regression coverage.
+- [x] Diagnose why the v5 persistent zone inventory shows zero zones for every asset and timeframe despite incoming market data.
+- [x] Reproduce zone detection on real persisted market payloads and verify whether detection, reconciliation, or dashboard retrieval is dropping zones.
+- [x] Correct zone persistence if needed without changing v5 confirmation, risk, timeframe, tracking, or Telegram boundaries, then add regression coverage.

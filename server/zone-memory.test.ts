@@ -44,6 +44,13 @@ describe("v5 zone memory", () => {
     expect(next[0].lifecycle).toBe("ACTIVE");
   });
 
+  it("normalizes detector interval casing before persisting a newly observed zone", () => {
+    const next = reconcileZoneMemory({ prior: [], observed: [{ ...zone, timeframe: "4h" }], asset: "EUR/USD", timeframe: "4H", currentPrice: 1.102, candleAt: "2026-08-28T04:00:00.000Z", observedAt: "2026-08-28T04:05:00.000Z" });
+    expect(next).toHaveLength(1);
+    expect(next[0].timeframe).toBe("4H");
+    expect(next[0].zoneKey).toBe("DEMAND:4H:1.10000000:1.10500000");
+  });
+
   it("keeps an unobserved zone as weakened instead of deleting it", () => {
     const next = reconcileZoneMemory({ prior: [prior], observed: [], asset: "EUR/USD", timeframe: "4H", currentPrice: 1.12, candleAt: "2026-08-28T04:00:00.000Z", observedAt: "2026-08-28T04:05:00.000Z" });
     expect(next[0].lifecycle).toBe("WEAKENED");
