@@ -1525,3 +1525,5 @@
 - [x] Allow a later replacement to reply to the previous contradicting signal only after the original parent signal has resolved, with v5 hierarchy-first and Entry Locator gates still enforced.
 - [x] Prevent exact duplicate generated signals and Telegram deliveries for the same asset, timeframe, direction, entry, stop loss, take profit, risk ratio, confidence, and confluence.
 - [x] Add regression coverage for resolved-parent replacement chains and duplicate-signal idempotency without changing tracking or paper-only boundaries.
+
+- [x] Add Monitoring visibility for replacement-chain lineage, resolved-parent state, and exact duplicate-suppression policy.
