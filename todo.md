@@ -1500,8 +1500,8 @@
 - [x] Synchronize the Monitoring-tab update to the connected trading-guard-ai2 GitHub main branch.
 - [x] Verify Render deploys the synchronized commit and exposes the Monitoring route.
 
-- [ ] Verify the two recent BTC/USD signals against Twelve Data post-entry candles and the user-reported take-profit outcome.
-- [ ] Ensure a resolved BTC/USD signal cannot remain PENDING and block the next setup; preserve auditable resolution evidence and add regression coverage.
+- [x] Verify the two recent BTC/USD signals against Twelve Data post-entry candles and the user-reported take-profit outcome.
+- [x] Ensure a resolved BTC/USD signal cannot remain PENDING and block the next setup; preserve auditable resolution evidence and add regression coverage.
 
 - [x] Record BTC/USD signals #17190003 and #17220003 as user-reported WINs at take profit, preserving the Twelve Data discrepancy in the audit note.
 - [x] Release the two signals from blocking new setups and verify tracking summaries and next-signal eligibility.
