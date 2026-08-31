@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gte, inArray, isNull, lt, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, lt, not, notInArray, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { appSettings, auditMessages, auditTrades, cooldownChangeLog, entryLocatorStates, generatedSignals, InsertUser, ownerAlertLedger, scannerRunLedger, strategyDecisionLedger, strategyRules, strategyIntelligenceComponents, strategyIntelligenceVersions, strategyLessons, telegramDeliveries, paperTradeAdjustments, users, v5ZoneHistory, whiteAiMemories } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -464,6 +464,23 @@ export async function listFailedOutcomeDeliveries(userId: number, limit = 2, now
     .innerJoin(generatedSignals, eq(telegramDeliveries.signalId, generatedSignals.id))
     .where(and(eq(telegramDeliveries.userId, userId), eq(telegramDeliveries.kind, "OUTCOME"), eq(telegramDeliveries.status, "FAILED"), gte(telegramDeliveries.createdAt, retrySince), inArray(generatedSignals.status, ["WIN", "LOSS"])))
     .orderBy(asc(telegramDeliveries.createdAt))
+    .limit(limit);
+}
+
+export async function listResolvedSignalsMissingOutcomeDelivery(userId: number, limit = 2) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({ signal: generatedSignals })
+    .from(generatedSignals)
+    .leftJoin(telegramDeliveries, and(eq(telegramDeliveries.signalId, generatedSignals.id), eq(telegramDeliveries.kind, "OUTCOME")))
+    .where(and(
+      eq(generatedSignals.userId, userId),
+      eq(generatedSignals.intelligenceVersion, "forex-trading-combined-document-v5"),
+      inArray(generatedSignals.status, ["WIN", "LOSS"]),
+      isNull(telegramDeliveries.id),
+      or(isNull(generatedSignals.outcomeNote), not(sql`${generatedSignals.outcomeNote} like 'Manual outcome override confirmed by user:%'`)),
+    ))
+    .orderBy(desc(generatedSignals.closedAt))
     .limit(limit);
 }
 

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { calculateMarketContext } from "./market-context";
 
-const { fetchMarketSeriesBatch, generateScannerDecisions, sendTelegramMessage, recordTelegramDelivery, createStrategyDecision, createPaperTradeAdjustment, hasTelegramDelivery, listOpenCurrentV5Signals, listFailedOutcomeDeliveries, getSettings, hasRecentStrategyDecision, hasOpenGeneratedSignal, getEntryLocatorState, saveEntryLocatorState, listV5ZoneHistory, upsertV5ZoneHistory, updateStrategyEngineStatus, recordStrategyEngineHealth, getActiveIntelligenceVersion, buildBoundedRuleText, activateIntelligenceVersion, listIntelligenceComponents, listStrategyRules, listAcceptedStrategyLessons, createIntelligenceVersion, createIntelligenceComponent, claimOwnerAlert, markOwnerAlertNotified, insert, select, db } = vi.hoisted(() => {
+const { fetchMarketSeriesBatch, generateScannerDecisions, sendTelegramMessage, recordTelegramDelivery, createStrategyDecision, createPaperTradeAdjustment, hasTelegramDelivery, listOpenCurrentV5Signals, listFailedOutcomeDeliveries, listResolvedSignalsMissingOutcomeDelivery, getSettings, hasRecentStrategyDecision, hasOpenGeneratedSignal, getEntryLocatorState, saveEntryLocatorState, listV5ZoneHistory, upsertV5ZoneHistory, updateStrategyEngineStatus, recordStrategyEngineHealth, getActiveIntelligenceVersion, buildBoundedRuleText, activateIntelligenceVersion, listIntelligenceComponents, listStrategyRules, listAcceptedStrategyLessons, createIntelligenceVersion, createIntelligenceComponent, claimOwnerAlert, markOwnerAlertNotified, insert, select, db } = vi.hoisted(() => {
   const fetchMarketSeriesBatch = vi.fn(async () => { throw new Error("Twelve Data quota exhausted"); });
   const generateScannerDecisions = vi.fn();
   const createStrategyDecision = vi.fn(async (input: any) => ({ id: 99, ...input }));
@@ -10,6 +10,7 @@ const { fetchMarketSeriesBatch, generateScannerDecisions, sendTelegramMessage, r
   const hasOpenGeneratedSignal = vi.fn(async () => false);
   const listOpenCurrentV5Signals = vi.fn(async () => []);
   const listFailedOutcomeDeliveries = vi.fn(async () => []);
+  const listResolvedSignalsMissingOutcomeDelivery = vi.fn(async () => []);
   const hasTelegramDelivery = vi.fn(async () => false);
   const createPaperTradeAdjustment = vi.fn(async () => 1);
   const claimOwnerAlert = vi.fn(async () => false);
@@ -37,7 +38,7 @@ const { fetchMarketSeriesBatch, generateScannerDecisions, sendTelegramMessage, r
     })),
   }));
   const db = { select, insert, update: vi.fn() };
-  return { fetchMarketSeriesBatch, generateScannerDecisions, sendTelegramMessage, recordTelegramDelivery, createStrategyDecision, createPaperTradeAdjustment, hasTelegramDelivery, listOpenCurrentV5Signals, listFailedOutcomeDeliveries, getSettings, hasRecentStrategyDecision, hasOpenGeneratedSignal, getEntryLocatorState, saveEntryLocatorState, listV5ZoneHistory, upsertV5ZoneHistory, updateStrategyEngineStatus, recordStrategyEngineHealth, getActiveIntelligenceVersion, buildBoundedRuleText, activateIntelligenceVersion, listIntelligenceComponents, listStrategyRules, listAcceptedStrategyLessons, createIntelligenceVersion, createIntelligenceComponent, claimOwnerAlert, markOwnerAlertNotified, insert, select, db };
+  return { fetchMarketSeriesBatch, generateScannerDecisions, sendTelegramMessage, recordTelegramDelivery, createStrategyDecision, createPaperTradeAdjustment, hasTelegramDelivery, listOpenCurrentV5Signals, listFailedOutcomeDeliveries, listResolvedSignalsMissingOutcomeDelivery, getSettings, hasRecentStrategyDecision, hasOpenGeneratedSignal, getEntryLocatorState, saveEntryLocatorState, listV5ZoneHistory, upsertV5ZoneHistory, updateStrategyEngineStatus, recordStrategyEngineHealth, getActiveIntelligenceVersion, buildBoundedRuleText, activateIntelligenceVersion, listIntelligenceComponents, listStrategyRules, listAcceptedStrategyLessons, createIntelligenceVersion, createIntelligenceComponent, claimOwnerAlert, markOwnerAlertNotified, insert, select, db };
 });
 
 vi.mock("./db", () => ({
@@ -67,6 +68,7 @@ vi.mock("./db", () => ({
   hasTelegramDelivery,
   listOpenCurrentV5Signals,
   listFailedOutcomeDeliveries,
+  listResolvedSignalsMissingOutcomeDelivery,
   claimOwnerAlert,
   markOwnerAlertNotified,
   listV5ZoneHistory,

@@ -1531,3 +1531,9 @@
 - [x] Verify the live Monitoring surface and inspect current replacement-chain and Telegram evidence.
 - [x] Add durable visibility for exact duplicate-suppression attempts only if it can be done without altering v5 decisions or Telegram delivery behavior; existing unique Telegram/paper-adjustment dedupe keys and the Monitoring duplicate counter are retained, so no schema migration was necessary.
 - [x] Run final tests, deployment verification, and production smoke checks before ending the work session.
+
+- [x] Run a fresh full-system audit covering the app shell, authentication, backend APIs, scanner, v5 hierarchy and zones, Entry Locator, contradiction chains, duplicate suppression, White AI, Cherry AI, tracking, Telegram, Monitoring, and collective workflow.
+- [x] Repair any confirmed application defects found during the audit and repeat failed checks until they pass.
+- [x] Save the final clean audit checkpoint with verified production evidence.
+
+- [x] Recover missing OUTCOME Telegram notifications for genuine live-resolved signals idempotently, while excluding manual/user-reported overrides and preserving existing tracking records.

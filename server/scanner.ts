@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { generatedSignals, users } from "../drizzle/schema";
-import { activateIntelligenceVersion, createIntelligenceComponent, createIntelligenceVersion, createPaperTradeAdjustment, createStrategyDecision, createStrategyLesson, ENTRY_LOCATOR_V5_GENERATION_MODE, getActiveIntelligenceVersion, buildBoundedRuleText, getAllRulesText, getDb, getEntryLocatorState, getRelevantRulesText, getTelegramDeliveryForSignal, hasExactGeneratedSignal, hasOpenGeneratedSignal, hasTelegramDelivery, claimOwnerAlert, getReplacementRootSignal, listAcceptedStrategyLessons, listFailedOutcomeDeliveries, listIntelligenceComponents, listV5ZoneHistory, listOpenCurrentV5Signals, listStrategyRules, recordStrategyEngineHealth, recordTelegramDelivery, saveEntryLocatorState, markOwnerAlertNotified, supersedeGeneratedSignal, updateStrategyEngineStatus, upsertV5ZoneHistory } from "./db";
+import { activateIntelligenceVersion, createIntelligenceComponent, createIntelligenceVersion, createPaperTradeAdjustment, createStrategyDecision, createStrategyLesson, ENTRY_LOCATOR_V5_GENERATION_MODE, getActiveIntelligenceVersion, buildBoundedRuleText, getAllRulesText, getDb, getEntryLocatorState, getRelevantRulesText, getTelegramDeliveryForSignal, hasExactGeneratedSignal, hasOpenGeneratedSignal, hasTelegramDelivery, claimOwnerAlert, getReplacementRootSignal, listAcceptedStrategyLessons, listFailedOutcomeDeliveries, listResolvedSignalsMissingOutcomeDelivery, listIntelligenceComponents, listV5ZoneHistory, listOpenCurrentV5Signals, listStrategyRules, recordStrategyEngineHealth, recordTelegramDelivery, saveEntryLocatorState, markOwnerAlertNotified, supersedeGeneratedSignal, updateStrategyEngineStatus, upsertV5ZoneHistory } from "./db";
 import { buildMultiTimeframeContext } from "./market-context";
 import { fetchOfficialMacroContext } from "./official-macro";
 import { buildIntelligenceModel, compileExecutableComponents, evaluateExecutableIntelligence, type ExecutableComponent } from "./intelligence";
@@ -275,6 +275,14 @@ async function persistV5ContextStates(userId: number, series1h: Map<string, Mark
   if (failures.length) console.warn(`[Scanner] Context-only timeframe state persistence had ${failures.length} failure(s): ${failures.map(failure => `${failure.asset} ${failure.timeframe}: ${failure.message}`).join(" | ")}`);
 }
 
+export function isGenuineLiveResolvedOutcome(signal: { status: string; outcomeNote?: string | null }) {
+  return (signal.status === "WIN" || signal.status === "LOSS") && !signal.outcomeNote?.startsWith("Manual outcome override confirmed by user:");
+}
+
+export function outcomeNotificationDedupeKey(signalId: number, status: "WIN" | "LOSS") {
+  return `outcome:${signalId}:${status}`;
+}
+
 export function outcomeFallbackPrice(signal: { status: string; entry: string | number; stopLoss: string | number; takeProfit: string | number; outcomeNote?: string | null; resolutionPrice?: string | number | null }) {
   const resolutionPrice = Number(signal.resolutionPrice);
   if (Number.isFinite(resolutionPrice)) return resolutionPrice;
@@ -302,6 +310,25 @@ async function retryFailedOutcomeDeliveries(userId: number) {
     }
   }
   return retried;
+}
+
+async function recoverMissingOutcomeDeliveries(userId: number) {
+  const missing = await listResolvedSignalsMissingOutcomeDelivery(userId, MAX_FAILED_OUTCOME_RETRIES_PER_RUN);
+  let recovered = 0;
+  for (const { signal } of missing) {
+    if (!isGenuineLiveResolvedOutcome(signal)) continue;
+    try {
+      const signalDelivery = await getTelegramDeliveryForSignal(userId, signal.id, "SIGNAL");
+      const closePrice = outcomeFallbackPrice(signal);
+      const dedupeKey = outcomeNotificationDedupeKey(signal.id, signal.status as "WIN" | "LOSS");
+      const delivery = await sendTelegramMessage(formatOutcomeTelegramMessage({ asset: signal.asset, timeframe: signal.timeframe, direction: signal.direction, status: signal.status as "WIN" | "LOSS", entry: signal.entry, stopLoss: signal.stopLoss, takeProfit: signal.takeProfit, closePrice, signalId: signal.id, note: signal.outcomeNote ?? undefined }), signal.asset, { replyToMessageId: signalDelivery?.status === "DELIVERED" ? signalDelivery.telegramMessageId ?? undefined : undefined });
+      await recordTelegramDelivery({ userId, signalId: signal.id, kind: "OUTCOME", status: delivery.delivered ? "DELIVERED" : "FAILED", telegramMessageId: delivery.telegramMessageId, dedupeKey, error: delivery.error });
+      if (delivery.delivered) recovered += 1;
+    } catch (error) {
+      console.warn(`[Tracker] Missing outcome recovery for ${signal.asset} ${signal.timeframe} skipped:`, error instanceof Error ? error.message : error);
+    }
+  }
+  return recovered;
 }
 
 async function ensureReplacementIntelligenceVersion(userId: number) {
@@ -621,9 +648,10 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
   }
   const newlyTracked = await trackOpenSignals(userId, seriesCache, createdSignalIds);
   const retriedOutcomes = await retryFailedOutcomeDeliveries(userId);
-  if (retriedOutcomes) console.info(`[Tracker] Retried ${retriedOutcomes} previously failed outcome notification(s).`);
+  const recoveredOutcomes = await recoverMissingOutcomeDeliveries(userId);
+  if (retriedOutcomes || recoveredOutcomes) console.info(`[Tracker] Recovered ${retriedOutcomes} failed and ${recoveredOutcomes} missing outcome notification(s).`);
   const adjustments = await monitorOpenSignalContradictions(userId, decisions, seriesCache);
-  return { created: created.length, tracked: newlyTracked + retriedOutcomes, adjustments, marketData: "available" };
+  return { created: created.length, tracked: newlyTracked + retriedOutcomes + recoveredOutcomes, adjustments, marketData: "available" };
 }
 
 async function monitorOpenSignalContradictions(userId: number, decisions: Array<any>, seriesCache: Map<string, MarketSeries>) {

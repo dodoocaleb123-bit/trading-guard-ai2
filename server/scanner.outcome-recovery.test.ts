@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_FAILED_OUTCOME_RETRIES_PER_RUN, MAX_OUTCOME_TRACKS_PER_RUN, outcomeFallbackPrice, selectOutcomeTrackingBatch } from "./scanner";
+import { MAX_FAILED_OUTCOME_RETRIES_PER_RUN, MAX_OUTCOME_TRACKS_PER_RUN, isGenuineLiveResolvedOutcome, outcomeFallbackPrice, outcomeNotificationDedupeKey, selectOutcomeTrackingBatch } from "./scanner";
 
 describe("scanner outcome recovery safeguards", () => {
   it("limits outcome tracking to the newest signals in deterministic order", () => {
@@ -23,5 +23,19 @@ describe("scanner outcome recovery safeguards", () => {
 
   it("keeps the retry batch smaller than the outcome-tracking batch", () => {
     expect(MAX_FAILED_OUTCOME_RETRIES_PER_RUN).toBeLessThan(MAX_OUTCOME_TRACKS_PER_RUN);
+  });
+
+  it("recovers only genuine live-resolved outcomes and excludes manual overrides", () => {
+    expect(isGenuineLiveResolvedOutcome({ status: "WIN", outcomeNote: "Closed from live BTC/USD price 100." })).toBe(true);
+    expect(isGenuineLiveResolvedOutcome({ status: "LOSS", outcomeNote: "Closed from live XAU/USD price 200." })).toBe(true);
+    expect(isGenuineLiveResolvedOutcome({ status: "WIN", outcomeNote: null })).toBe(true);
+    expect(isGenuineLiveResolvedOutcome({ status: "WIN", outcomeNote: "Manual outcome override confirmed by user: take profit reported hit." })).toBe(false);
+    expect(isGenuineLiveResolvedOutcome({ status: "PENDING", outcomeNote: "Still open." })).toBe(false);
+  });
+
+  it("uses one stable outcome dedupe key per signal and status", () => {
+    expect(outcomeNotificationDedupeKey(17310001, "LOSS")).toBe("outcome:17310001:LOSS");
+    expect(outcomeNotificationDedupeKey(17310001, "LOSS")).toBe(outcomeNotificationDedupeKey(17310001, "LOSS"));
+    expect(outcomeNotificationDedupeKey(17310001, "LOSS")).not.toBe(outcomeNotificationDedupeKey(17310001, "WIN"));
   });
 });
