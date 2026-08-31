@@ -1544,12 +1544,12 @@
 - [x] Reconcile duplicate XAU/USD 5MIN signals 17490001, 17490002, and 17490003 without deleting audit history.
 - [x] Make exact-signal duplicate prevention atomic across concurrent scanner workers and add regression coverage for the race.
 
-- [ ] Observe the next production scanner cycle, Monitoring state, Telegram activity, and contradiction-chain activity.
-- [ ] Check recurring provider failures and apply safe backoff only if production evidence warrants it.
-- [ ] Identify and reconcile genuinely resolved trades that remain PENDING, preserving auditable evidence and v5 boundaries.
+- [x] Observe the next production scanner cycle, Monitoring state, Telegram activity, and contradiction-chain activity.
+- [x] Check recurring provider failures and apply safe backoff only if production evidence warrants it.
+- [x] Identify and reconcile genuinely resolved trades that remain PENDING, preserving auditable evidence and v5 boundaries.
 
-- [ ] Reconcile the nine Twelve Data-confirmed stop-loss hits that remain PENDING, preserving outcome evidence and preventing duplicate OUTCOME notifications.
-- [ ] Replace evidence-varying contradiction warning keys with a stable per-original-signal identity and add regression coverage for one-time warnings across changing scan evidence.
+- [x] Reconcile the nine Twelve Data-confirmed stop-loss hits that remain PENDING, preserving outcome evidence and preventing duplicate OUTCOME notifications.
+- [x] Replace evidence-varying contradiction warning keys with a stable per-original-signal identity and add regression coverage for one-time warnings across changing scan evidence.
 
 - [x] Clarify Monitoring’s external-trigger versus app-side Heartbeat scope so healthy external scanner cycles are not presented as an unconfigured scanner failure
 - [x] Verify the next qualified v5 signal and Telegram delivery exactly once, including current signal identity and risk geometry
