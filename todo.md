@@ -1514,3 +1514,7 @@
 
 - [x] Prevent the Manus development preview from throwing `supabaseUrl is required` when Render-only Vite Supabase variables are absent, while preserving the configured production client.
 - [x] Re-run the full deterministic suite, TypeScript check, and production build after the preview-runtime safeguard.
+
+- [x] Allow a qualified opposite v5 setup to reply to and replace a contradicted floating signal for the same asset/timeframe without bypassing existing confirmation gates.
+- [x] Send the contradiction warning only once per original floating signal, with durable idempotency across scanner cycles.
+- [x] Preserve paper-only status, tracking history, Telegram delivery auditability, and existing v5 confirmation/risk rules; add regression coverage.

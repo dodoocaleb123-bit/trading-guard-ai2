@@ -134,6 +134,19 @@ export function buildSignalDeliveryDedupeKey(signalId: number) {
   return `signal:${signalId}`;
 }
 
+/** A contradiction warning is a state transition for the original thesis,
+ * not a per-scan notification. Keep the key independent of changing indicator
+ * fingerprints so the same floating signal cannot spam Telegram. */
+export function buildContradictionWarningDedupeKey(signalId: number) {
+  return `contradiction-warning:${signalId}`;
+}
+
+/** A qualified opposite setup remains distinct from the one-time warning and
+ * is linked to the original Telegram message as its replacement thesis. */
+export function buildContradictoryReplacementDedupeKey(signalId: number, fingerprint: string) {
+  return `contradiction-replacement:${signalId}:${fingerprint}`;
+}
+
 export const MAX_OUTCOME_TRACKS_PER_RUN = 32;
 export const MAX_FAILED_OUTCOME_RETRIES_PER_RUN = 2;
 
@@ -609,7 +622,9 @@ async function monitorOpenSignalContradictions(userId: number, decisions: Array<
       if (signalDelivery?.status !== "DELIVERED" || !signalDelivery.telegramMessageId) continue;
       const selectedRiskReward = Number(decision.decisionTrace?.levelDerivation?.selectedRiskReward);
       const replacementReady = isEligibleContradictoryReplacement(decision);
-      const dedupeKey = `adjustment:${signal.id}:${contradiction.fingerprint}:${replacementReady ? "REPLACEMENT" : "WARNING"}`;
+      const dedupeKey = replacementReady
+        ? buildContradictoryReplacementDedupeKey(signal.id, contradiction.fingerprint)
+        : buildContradictionWarningDedupeKey(signal.id);
       if (await hasTelegramDelivery(dedupeKey)) continue;
       let replacementSignalId: number | null = null;
       let message: string;
