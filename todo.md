@@ -1489,5 +1489,5 @@
 - [x] Fix the reproducible Cherry AI CSS preload failure by statically importing AIChatBox and verify chat, typecheck, and production build paths
 
 - [x] Diagnose and fix Render protected tRPC 502 responses that leave Scanner diagnostics loading.
-- [ ] Verify split Supabase bearer authentication and backend route handling after the 502 fix.
-- [ ] Re-run production Scanner, v5 smoke, zone inventory, White AI, Cherry AI, tracking, and Telegram checks for a clean pass.
+- [x] Verify split Supabase bearer authentication and backend route handling after the 502 fix.
+- [x] Re-run production Scanner, v5 smoke, zone inventory, White AI, Cherry AI, tracking, and Telegram checks for a clean pass.
