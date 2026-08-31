@@ -1521,3 +1521,7 @@
 
 - [x] Require every contradicting replacement candidate to pass the complete v5 hierarchy judgment before Entry Locator confidence/confluence threshold checks.
 - [x] Add regression coverage proving a hierarchy-failed opposite setup cannot warn-as-replacement or emit a Telegram replacement, while a hierarchy-approved setup proceeds to Entry Locator checks.
+
+- [x] Allow a later replacement to reply to the previous contradicting signal only after the original parent signal has resolved, with v5 hierarchy-first and Entry Locator gates still enforced.
+- [x] Prevent exact duplicate generated signals and Telegram deliveries for the same asset, timeframe, direction, entry, stop loss, take profit, risk ratio, confidence, and confluence.
+- [x] Add regression coverage for resolved-parent replacement chains and duplicate-signal idempotency without changing tracking or paper-only boundaries.

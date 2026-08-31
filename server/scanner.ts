@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { generatedSignals, users } from "../drizzle/schema";
-import { activateIntelligenceVersion, createIntelligenceComponent, createIntelligenceVersion, createPaperTradeAdjustment, createStrategyDecision, createStrategyLesson, ENTRY_LOCATOR_V5_GENERATION_MODE, getActiveIntelligenceVersion, buildBoundedRuleText, getAllRulesText, getDb, getEntryLocatorState, getRelevantRulesText, getTelegramDeliveryForSignal, hasOpenGeneratedSignal, hasTelegramDelivery, claimOwnerAlert, listAcceptedStrategyLessons, listFailedOutcomeDeliveries, listIntelligenceComponents, listV5ZoneHistory, listOpenCurrentV5Signals, listStrategyRules, recordStrategyEngineHealth, recordTelegramDelivery, saveEntryLocatorState, markOwnerAlertNotified, supersedeGeneratedSignal, updateStrategyEngineStatus, upsertV5ZoneHistory } from "./db";
+import { activateIntelligenceVersion, createIntelligenceComponent, createIntelligenceVersion, createPaperTradeAdjustment, createStrategyDecision, createStrategyLesson, ENTRY_LOCATOR_V5_GENERATION_MODE, getActiveIntelligenceVersion, buildBoundedRuleText, getAllRulesText, getDb, getEntryLocatorState, getRelevantRulesText, getTelegramDeliveryForSignal, hasExactGeneratedSignal, hasOpenGeneratedSignal, hasTelegramDelivery, claimOwnerAlert, getReplacementRootSignal, listAcceptedStrategyLessons, listFailedOutcomeDeliveries, listIntelligenceComponents, listV5ZoneHistory, listOpenCurrentV5Signals, listStrategyRules, recordStrategyEngineHealth, recordTelegramDelivery, saveEntryLocatorState, markOwnerAlertNotified, supersedeGeneratedSignal, updateStrategyEngineStatus, upsertV5ZoneHistory } from "./db";
 import { buildMultiTimeframeContext } from "./market-context";
 import { fetchOfficialMacroContext } from "./official-macro";
 import { buildIntelligenceModel, compileExecutableComponents, evaluateExecutableIntelligence, type ExecutableComponent } from "./intelligence";
@@ -47,6 +47,14 @@ export function shouldCreateCandidate(ruleCount: number, series: { close?: numbe
 
 export function buildSetupIdentity(asset: string, timeframe: string, direction: "BUY" | "SELL", marketRegime: string | null | undefined, breakoutState: string | null | undefined) {
   return `${asset}:${timeframe}:${direction}:${marketRegime ?? "UNKNOWN"}:${breakoutState ?? "UNKNOWN"}`;
+}
+
+export function canAdvanceReplacementChain(parentStatus?: string | null) {
+  return parentStatus == null || parentStatus !== "PENDING";
+}
+
+export function buildExactSignalFingerprint(input: { asset: string; timeframe: string; direction: "BUY" | "SELL"; entry: string | number; stopLoss: string | number; takeProfit: string | number; riskReward: string | number; confidence: string | number; confluenceScore: string | number }) {
+  return [input.asset, input.timeframe, input.direction, input.entry, input.stopLoss, input.takeProfit, input.riskReward, input.confidence, input.confluenceScore].join("|");
 }
 
 export function resolveOutcome(direction: "BUY" | "SELL", price: number, stop: number, target: number, high = price, low = price, entry = price): "WIN" | "LOSS" | null {
@@ -595,7 +603,12 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
         continue;
       }
       const rationale = formatAuditResult(gated, market);
-      const [result] = await db.insert(generatedSignals).values({ userId, asset, timeframe, direction: approvedLevels.direction as "BUY" | "SELL", entry: String(approvedLevels.entry), stopLoss: String(approvedLevels.stopLoss), takeProfit: String(approvedLevels.takeProfit), riskReward: approvedLevels.riskReward.toFixed(2), confidence: String(approvedLevels.confidence), confluenceScore: String(gated.confluenceScore ?? 0), rationale, intelligenceVersion: replacementModel.id, generationMode: ENTRY_LOCATOR_V5_GENERATION_MODE, intelligenceComponents: JSON.stringify(gated.decisionTrace?.supportingComponents ?? gated.ruleEvidence ?? []), marketRegime: gated.marketRegime ?? market.replacementMarketRegime ?? null, status: "PENDING" });
+      const exactSignalInput = { userId, asset, timeframe, direction: approvedLevels.direction as "BUY" | "SELL", entry: String(approvedLevels.entry), stopLoss: String(approvedLevels.stopLoss), takeProfit: String(approvedLevels.takeProfit), riskReward: approvedLevels.riskReward.toFixed(2), confidence: String(approvedLevels.confidence), confluenceScore: String(gated.confluenceScore ?? 0), intelligenceVersion: replacementModel.id, generationMode: ENTRY_LOCATOR_V5_GENERATION_MODE };
+      if (await hasExactGeneratedSignal(exactSignalInput)) {
+        console.info(`[Scanner] ${asset} ${timeframe} exact setup already exists (${buildExactSignalFingerprint(exactSignalInput)}); duplicate signal suppressed.`);
+        continue;
+      }
+      const [result] = await db.insert(generatedSignals).values({ ...exactSignalInput, rationale, intelligenceComponents: JSON.stringify(gated.decisionTrace?.supportingComponents ?? gated.ruleEvidence ?? []), marketRegime: gated.marketRegime ?? market.replacementMarketRegime ?? null, status: "PENDING" });
       const signal = { id: Number(result.insertId), ...approvedLevels };
       await mirrorToSupabase("generated_signals", { user_id: userId, ...signal, status: "PENDING", rationale, rule_evidence: gated.ruleEvidence ?? [], confluence_score: gated.confluenceScore ?? 0 });
       const delivery = await sendTelegramMessage(formatApprovedTelegramMessage({ asset, timeframe, direction: approvedLevels.direction, entry: approvedLevels.entry, stopLoss: approvedLevels.stopLoss, takeProfit: approvedLevels.takeProfit, confidence: approvedLevels.confidence, riskReward: approvedLevels.riskReward, adjustments: gated.adjustments, ruleEvidence: gated.ruleEvidence, confluenceScore: gated.confluenceScore, decisionTrace: gated.decisionTrace, fundamentalContext: market.fundamentalContext, generationSource: "ENTRY_LOCATOR" }), asset);
@@ -622,6 +635,11 @@ async function monitorOpenSignalContradictions(userId: number, decisions: Array<
     try {
       const decision = decisions.find((candidate) => candidate.asset === signal.asset && candidate.timeframe === signal.timeframe);
       const market = decision?.market ?? seriesCache.get(`${signal.asset}:${signal.timeframe}`);
+      const replacementRoot = await getReplacementRootSignal(userId, signal.id);
+      // A replacement chain may advance only after its original parent thesis
+      // has closed (SUPERSEDED, WIN, LOSS, or INVALIDATED). The current signal
+      // may remain PENDING while the resolved parent is used as reply context.
+      if (!canAdvanceReplacementChain(replacementRoot?.status)) continue;
       // Hierarchy judgment is the first gate. Do not inspect contradiction
       // confidence/confluence or Entry Locator replacement readiness until the
       // opposite candidate itself is an approved v5 structural plan.
@@ -641,7 +659,12 @@ async function monitorOpenSignalContradictions(userId: number, decisions: Array<
       let action: "REVIEW_DIRECTION" | "TIGHTEN_STOP" | "EXIT_PAPER_SETUP" | "UPGRADE_PAPER_SETUP" = contradiction.action;
       let reason = contradiction.reason;
       if (replacementReady) {
-        const [replacementResult] = await db.insert(generatedSignals).values({ userId, asset: signal.asset, timeframe: signal.timeframe, direction: contradiction.observedDirection, entry: String(decision.entry), stopLoss: String(decision.stopLoss), takeProfit: String(decision.takeProfit), riskReward: selectedRiskReward.toFixed(2), confidence: String(decision.confidence), confluenceScore: String(decision.confluenceScore), rationale: formatAuditResult(decision, market), intelligenceVersion: "forex-trading-combined-document-v5", generationMode: ENTRY_LOCATOR_V5_GENERATION_MODE, intelligenceComponents: JSON.stringify(decision.decisionTrace?.supportingComponents ?? decision.ruleEvidence ?? []), marketRegime: decision.marketRegime ?? market.replacementMarketRegime ?? null, status: "PENDING" });
+        const replacementSignalInput = { userId, asset: signal.asset, timeframe: signal.timeframe, direction: contradiction.observedDirection as "BUY" | "SELL", entry: String(decision.entry), stopLoss: String(decision.stopLoss), takeProfit: String(decision.takeProfit), riskReward: selectedRiskReward.toFixed(2), confidence: String(decision.confidence), confluenceScore: String(decision.confluenceScore), intelligenceVersion: "forex-trading-combined-document-v5", generationMode: ENTRY_LOCATOR_V5_GENERATION_MODE };
+        if (await hasExactGeneratedSignal(replacementSignalInput)) {
+          console.info(`[Adjustment] ${signal.asset} ${signal.timeframe} exact replacement already exists (${buildExactSignalFingerprint(replacementSignalInput)}); duplicate signal suppressed.`);
+          continue;
+        }
+        const [replacementResult] = await db.insert(generatedSignals).values({ ...replacementSignalInput, rationale: formatAuditResult(decision, market), intelligenceComponents: JSON.stringify(decision.decisionTrace?.supportingComponents ?? decision.ruleEvidence ?? []), marketRegime: decision.marketRegime ?? market.replacementMarketRegime ?? null, status: "PENDING" });
         replacementSignalId = Number(replacementResult.insertId);
         action = "UPGRADE_PAPER_SETUP";
         reason = `A contradictory ${contradiction.observedDirection} setup passed the Entry Locator with exact 1:${selectedRiskReward} geometry. The original ${signal.direction} paper setup is preserved for audit history and superseded by replacement signal #${replacementSignalId}.`;

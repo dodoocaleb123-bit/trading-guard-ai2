@@ -403,6 +403,50 @@ export async function listOpenCurrentV5Signals(userId: number) {
   return db.select().from(generatedSignals).where(and(eq(generatedSignals.userId, userId), eq(generatedSignals.status, "PENDING"), eq(generatedSignals.intelligenceVersion, "forex-trading-combined-document-v5"), eq(generatedSignals.generationMode, ENTRY_LOCATOR_V5_GENERATION_MODE))).orderBy(desc(generatedSignals.openedAt));
 }
 
+export async function hasExactGeneratedSignal(input: { userId: number; asset: string; timeframe: string; direction: "BUY" | "SELL"; entry: string | number; stopLoss: string | number; takeProfit: string | number; riskReward: string | number; confidence: string | number; confluenceScore: string | number; intelligenceVersion: string; generationMode: string }) {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db.select({ id: generatedSignals.id }).from(generatedSignals).where(and(
+    eq(generatedSignals.userId, input.userId),
+    eq(generatedSignals.asset, input.asset),
+    eq(generatedSignals.timeframe, input.timeframe),
+    eq(generatedSignals.direction, input.direction),
+    eq(generatedSignals.entry, String(input.entry)),
+    eq(generatedSignals.stopLoss, String(input.stopLoss)),
+    eq(generatedSignals.takeProfit, String(input.takeProfit)),
+    eq(generatedSignals.riskReward, String(input.riskReward)),
+    eq(generatedSignals.confidence, String(input.confidence)),
+    eq(generatedSignals.confluenceScore, String(input.confluenceScore)),
+    eq(generatedSignals.intelligenceVersion, input.intelligenceVersion),
+    eq(generatedSignals.generationMode, input.generationMode),
+  )).limit(1);
+  return rows.length > 0;
+}
+
+export async function getReplacementParentSignal(userId: number, replacementSignalId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select({ parent: generatedSignals }).from(paperTradeAdjustments)
+    .innerJoin(generatedSignals, eq(paperTradeAdjustments.signalId, generatedSignals.id))
+    .where(and(eq(paperTradeAdjustments.userId, userId), eq(paperTradeAdjustments.replacementSignalId, replacementSignalId)))
+    .orderBy(desc(paperTradeAdjustments.createdAt))
+    .limit(1);
+  return rows[0]?.parent;
+}
+
+export async function getReplacementRootSignal(userId: number, signalId: number) {
+  let currentId = signalId;
+  let parent = await getReplacementParentSignal(userId, currentId);
+  let steps = 0;
+  while (parent && steps < 8) {
+    const next = await getReplacementParentSignal(userId, parent.id);
+    if (!next) return parent;
+    parent = next;
+    steps += 1;
+  }
+  return parent;
+}
+
 export const OUTCOME_RETRY_WINDOW_MINUTES = 20;
 
 export function isOutcomeDeliveryRetryable(createdAt: Date | string, now = new Date(), windowMinutes = OUTCOME_RETRY_WINDOW_MINUTES) {
