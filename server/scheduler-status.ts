@@ -184,10 +184,17 @@ export function buildCallbackStatus(input: CallbackStatusInput) {
   const configuredTaskUid = input.scheduleCronTaskUid ?? null;
 
   if (!input.scannerEnabled || !configuredTaskUid) {
+    const externalTriggerActive = Boolean(input.scannerEnabled && !configuredTaskUid && appLastRunAt);
     return {
       status: "NOT_CONFIGURED" as const,
-      label: input.scannerEnabled ? "NOT CONFIGURED" : "SCANNER DISABLED",
-      diagnosis: input.scannerEnabled ? "No scanner Heartbeat task is stored for this account." : "The scanner is disabled in app settings.",
+      label: input.scannerEnabled
+        ? externalTriggerActive ? "EXTERNAL TRIGGER ACTIVE" : "NOT CONFIGURED"
+        : "SCANNER DISABLED",
+      diagnosis: !input.scannerEnabled
+        ? "The scanner is disabled in app settings."
+        : externalTriggerActive
+          ? "No per-account Heartbeat task is stored, but recent scanner cycles are arriving through the configured external trigger. The cadence diagnostics below are the source of truth for scanner health."
+          : "No scanner Heartbeat task is stored for this account.",
       taskUid: configuredTaskUid,
       schedulerJob: input.schedulerJob ?? null,
       appLastRunAt,

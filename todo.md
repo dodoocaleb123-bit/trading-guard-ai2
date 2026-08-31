@@ -1543,3 +1543,36 @@
 
 - [x] Reconcile duplicate XAU/USD 5MIN signals 17490001, 17490002, and 17490003 without deleting audit history.
 - [x] Make exact-signal duplicate prevention atomic across concurrent scanner workers and add regression coverage for the race.
+
+- [ ] Observe the next production scanner cycle, Monitoring state, Telegram activity, and contradiction-chain activity.
+- [ ] Check recurring provider failures and apply safe backoff only if production evidence warrants it.
+- [ ] Identify and reconcile genuinely resolved trades that remain PENDING, preserving auditable evidence and v5 boundaries.
+
+- [ ] Reconcile the nine Twelve Data-confirmed stop-loss hits that remain PENDING, preserving outcome evidence and preventing duplicate OUTCOME notifications.
+- [ ] Replace evidence-varying contradiction warning keys with a stable per-original-signal identity and add regression coverage for one-time warnings across changing scan evidence.
+
+- [x] Clarify Monitoring’s external-trigger versus app-side Heartbeat scope so healthy external scanner cycles are not presented as an unconfigured scanner failure
+- [x] Verify the next qualified v5 signal and Telegram delivery exactly once, including current signal identity and risk geometry
+- [x] Verify all nine manually reconciled live-resolved outcomes have durable outcome notifications and no longer block tracking
+- [x] Recheck provider-unavailable recurrence and document whether backoff/quota alert changes are warranted without changing v5 decision ownership
+- [x] Complete focused tests, typecheck, production build, and visual verification for the Monitoring clarification
+- [x] Save and publish the completed production verification release
+
+## Production verification evidence (Aug 31, 2026)
+
+- [x] Observed 20:55 UTC external scanner cycle: SUCCEEDED, marketData=available, trackedSignals=1, createdSignals=1, duplicateCallbacks=0
+- [x] Observed qualified signal #17520001: BTC/USD 15MIN BUY, entry 78904.01, stop 78809.29, target 80387.29, actual ratio 1:15.66, confidence 86%, confluence 100%; one DELIVERED Telegram row with dedupe key signal:17520001 and message 2194
+- [x] Confirmed all nine reconciled signal IDs have exactly one durable OUTCOME delivery row
+- [x] Confirmed recent 20:50–20:55 window has one SIGNAL and five OUTCOME deliveries, all DELIVERED
+- [x] Confirmed recurring provider-unavailable history remains bounded to 21 of 277 external cycles while the latest cycles are available; no quota/backoff code change justified by this observation alone
+- [x] Confirm 20:55 Monitoring UI reflects the same evidence after data refresh
+
+## Historical record
+
+- [x] Added post-release production observation evidence for scanner cadence, qualified signal delivery, outcome recovery, provider availability, and Monitoring scope clarity
+
+## Current task: Monitoring scope clarity
+
+- [x] Replace misleading callback-only wording with explicit external-trigger ownership when Heartbeat is not configured
+- [x] Add regression coverage for external-trigger versus Heartbeat callback display
+- [x] Run validation and publish the UI clarification

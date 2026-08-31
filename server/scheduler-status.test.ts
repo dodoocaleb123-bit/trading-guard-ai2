@@ -136,7 +136,23 @@ describe("callback status", () => {
   });
 
   it("reports an unconfigured or disabled scanner safely", () => {
-    expect(buildCallbackStatus({ scannerEnabled: true, scheduleCronTaskUid: null, schedulerRegistryAvailable: true }).status).toBe("NOT_CONFIGURED");
+    const unconfigured = buildCallbackStatus({ scannerEnabled: true, scheduleCronTaskUid: null, schedulerRegistryAvailable: true });
+    expect(unconfigured.status).toBe("NOT_CONFIGURED");
+    expect(unconfigured.label).toBe("NOT CONFIGURED");
+    expect(unconfigured.diagnosis).toContain("No scanner Heartbeat task is stored");
     expect(buildCallbackStatus({ scannerEnabled: false, scheduleCronTaskUid: job.taskUid, schedulerJob: job, schedulerRegistryAvailable: true }).label).toBe("SCANNER DISABLED");
+  });
+
+  it("distinguishes a healthy external trigger from an empty Heartbeat configuration", () => {
+    const result = buildCallbackStatus({
+      scannerEnabled: true,
+      scheduleCronTaskUid: null,
+      schedulerRegistryAvailable: true,
+      strategyEngineLastRunAt: "2026-08-31T20:55:36.000Z",
+      now: new Date("2026-08-31T20:56:00.000Z"),
+    });
+    expect(result.status).toBe("NOT_CONFIGURED");
+    expect(result.label).toBe("EXTERNAL TRIGGER ACTIVE");
+    expect(result.diagnosis).toContain("recent scanner cycles are arriving through the configured external trigger");
   });
 });
