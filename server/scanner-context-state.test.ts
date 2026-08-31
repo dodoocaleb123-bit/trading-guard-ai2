@@ -50,6 +50,34 @@ describe("v5 context-only timeframe state", () => {
     expect(evidence.resistanceZone).toEqual([101.5, 102]);
   });
 
+  it("retains validated structural support and resistance as demand and supply zones when displacement is absent", () => {
+    const series = {
+      ...makeSeries("4h", "2026-08-28 04:00:00"),
+      values: Array.from({ length: 10 }, (_, index) => ({
+        datetime: `2026-08-27 ${String(index).padStart(2, "0")}:00:00`,
+        open: String(100 + (index % 2) * 0.1),
+        high: "101",
+        low: "99",
+        close: String(100 + (index % 2) * 0.1),
+      })),
+      close: 100,
+      marketContext: {
+        supportResistance: { supportZone: [99, 99.4], resistanceZone: [100.6, 101], support: 99, resistance: 101 },
+        marketStructure: "RANGE_BOUND",
+        breakoutState: "WITHIN_RANGE",
+        nextSupport: null,
+        nextResistance: null,
+        volatility: { atr: 2, atrPercent: 2, regime: "STABLE" },
+        sampleSize: 10,
+      } as any,
+    };
+    const evidence = buildPersistedZoneEvidence({ asset: "EUR/USD", timeframe: "4H", series });
+    expect(evidence.zones).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "DEMAND", lower: 99, upper: 99.4, timeframe: "4h" }),
+      expect.objectContaining({ kind: "SUPPLY", lower: 100.6, upper: 101, timeframe: "4h" }),
+    ]));
+  });
+
   it("increments refresh count and clears emission-only metrics", () => {
     const state = buildContextOnlyState({
       asset: "XAU/USD",

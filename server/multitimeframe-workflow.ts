@@ -5,7 +5,7 @@ import { evaluateReplacementIntelligence } from "./replacement-intelligence";
 
 type Candle = { datetime?: string; open: number; high: number; low: number; close: number; volume?: number };
 export type WorkflowSeries = { interval: string; values: Array<Record<string, unknown>>; close: number; marketContext: MarketContext | null };
-export type WorkflowZone = { kind: "SUPPLY" | "DEMAND"; lower: number; upper: number; reactions: number; displacement: number; fresh: boolean; weakFor: Array<"BUY" | "SELL">; timeframe: string; };
+export type WorkflowZone = { kind: "SUPPLY" | "DEMAND"; lower: number; upper: number; reactions: number; displacement: number; fresh: boolean; weakFor: Array<"BUY" | "SELL">; timeframe: string; source?: "DISPLACEMENT" | "STRUCTURAL"; };
 
 type Confirmation = { kind: "REJECTION" | "ENGULFING" | "CHoCH" | "NONE"; direction: "BUY" | "SELL" | "NEUTRAL"; observation: string; timeframe: string };
 
@@ -58,6 +58,23 @@ function range(candle: Candle) { return Math.max(candle.high - candle.low, 0); }
 function body(candle: Candle) { return Math.abs(candle.close - candle.open); }
 function averageRange(candles: Candle[]) { return average(candles.slice(-20).map(range)); }
 
+function buildStructuralRangeZones(series: WorkflowSeries, asset: string, candles: Candle[]): WorkflowZone[] {
+  const support = series.marketContext?.supportResistance.supportZone;
+  const resistance = series.marketContext?.supportResistance.resistanceZone;
+  const candidates: Array<{ kind: WorkflowZone["kind"]; bounds: [number, number] }> = [
+    { kind: "DEMAND", bounds: support ?? [0, 0] },
+    { kind: "SUPPLY", bounds: resistance ?? [0, 0] },
+  ];
+  return candidates.flatMap(({ kind, bounds }) => {
+    const lower = Math.min(Number(bounds[0]), Number(bounds[1]));
+    const upper = Math.max(Number(bounds[0]), Number(bounds[1]));
+    if (!Number.isFinite(lower) || !Number.isFinite(upper) || upper <= lower) return [];
+    const reactions = candles.filter((candle) => candle.low <= upper && candle.high >= lower).length;
+    if (reactions < 2) return [];
+    return [{ kind, lower: round(lower, precision(asset)), upper: round(upper, precision(asset)), reactions, displacement: 0, fresh: reactions <= 3, weakFor: [], timeframe: series.interval, source: "STRUCTURAL" } satisfies WorkflowZone];
+  });
+}
+
 export function detectWorkflowZones(series: WorkflowSeries, asset: string): WorkflowZone[] {
   const candles = parse(series.values);
   if (candles.length < 8) return [];
@@ -83,10 +100,12 @@ export function detectWorkflowZones(series: WorkflowSeries, asset: string): Work
       : kind === "SUPPLY" && candles.slice(index + 2).some((candle) => candle.close > upper)
         ? ["SELL" as const]
         : [];
-    const zone: WorkflowZone = { kind, lower: round(lower, precision(asset)), upper: round(upper, precision(asset)), reactions, displacement: round(displacement, precision(asset)), fresh: reactions <= 3, weakFor, timeframe: series.interval };
+    const zone: WorkflowZone = { kind, lower: round(lower, precision(asset)), upper: round(upper, precision(asset)), reactions, displacement: round(displacement, precision(asset)), fresh: reactions <= 3, weakFor, timeframe: series.interval, source: "DISPLACEMENT" };
     if (!zones.some((existing) => existing.kind === zone.kind && Math.abs(existing.lower - zone.lower) <= avgRange * 0.2 && Math.abs(existing.upper - zone.upper) <= avgRange * 0.2)) zones.push(zone);
   }
-  return zones.slice(-12);
+  const structuralZones = buildStructuralRangeZones(series, asset, candles);
+  const combined = [...zones, ...structuralZones].filter((zone, index, all) => all.findIndex((candidate) => candidate.kind === zone.kind && Math.abs(candidate.lower - zone.lower) <= avgRange * 0.2 && Math.abs(candidate.upper - zone.upper) <= avgRange * 0.2) === index);
+  return combined.slice(-12);
 }
 
 function protected4hIsInvalidated(series: WorkflowSeries | undefined, inferred: "BUY" | "SELL" | "NEUTRAL") {
@@ -203,7 +222,7 @@ export function evaluateHierarchicalWorkflow(input: { asset: string; timeframe: 
   const normalizedTimeframe = input.timeframe.toUpperCase();
   const confirmationSeries = normalizedTimeframe === "1H" ? input.series15m ?? input.primary : input.series5m ?? input.series15m ?? input.primary;
   const confirmation = detectConfirmation(confirmationSeries, workingDirection, confirmationSeries.interval);
-  const targetZones = zones.filter((zone) => zone.kind === (workingDirection === "BUY" ? "SUPPLY" : "DEMAND") && !zone.weakFor.includes(workingDirection) && (workingDirection === "BUY" ? zone.lower > currentPrice : zone.upper < currentPrice)).sort((left, right) => Math.abs((workingDirection === "BUY" ? left.lower : left.upper) - currentPrice) - Math.abs((workingDirection === "BUY" ? right.lower : right.upper) - currentPrice));
+  const targetZones = zones.filter((zone) => zone.source !== "STRUCTURAL" && zone.kind === (workingDirection === "BUY" ? "SUPPLY" : "DEMAND") && !zone.weakFor.includes(workingDirection) && (workingDirection === "BUY" ? zone.lower > currentPrice : zone.upper < currentPrice)).sort((left, right) => Math.abs((workingDirection === "BUY" ? left.lower : left.upper) - currentPrice) - Math.abs((workingDirection === "BUY" ? right.lower : right.upper) - currentPrice));
   const targetZone = targetZones[0] ?? null;
   const minimumTargetDistance = pipSize(input.asset) * 30;
   const targetFarEnough = targetZone != null && Math.abs((workingDirection === "BUY" ? targetZone.lower : targetZone.upper) - currentPrice) >= minimumTargetDistance;
