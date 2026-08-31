@@ -1,5 +1,6 @@
 import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS, decodeOAuthState } from "@shared/const";
 import { ForbiddenError } from "@shared/_core/errors";
+import { createClient } from "@supabase/supabase-js";
 import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
@@ -256,18 +257,49 @@ class SDKServer {
   }
 
   async authenticateRequest(req: Request): Promise<AuthenticatedUser> {
+    const authHeader = req.headers.authorization;
+    if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+      const accessToken = authHeader.slice(7);
+      if (ENV.supabaseUrl && ENV.supabaseAnonKey) {
+        const supabase = createClient(ENV.supabaseUrl, ENV.supabaseAnonKey, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        });
+        const { data, error } = await supabase.auth.getUser(accessToken);
+        if (!error && data.user) {
+          const signedInAt = new Date();
+          const openId = data.user.id;
+          const metadata = data.user.user_metadata as Record<string, unknown>;
+          const name = typeof metadata.full_name === "string"
+            ? metadata.full_name
+            : typeof metadata.name === "string"
+              ? metadata.name
+              : data.user.email?.split("@")[0] ?? "Google User";
+          let user = await db.getUserByOpenId(openId);
+          if (!user) {
+            await db.upsertUser({
+              openId,
+              name,
+              email: data.user.email ?? null,
+              loginMethod: "google",
+              lastSignedIn: signedInAt,
+            });
+            user = await db.getUserByOpenId(openId);
+          } else {
+            await db.upsertUser({ openId, lastSignedIn: signedInAt });
+          }
+          if (user) return user;
+        }
+      }
+    }
+
+    // Fallback for legacy Manus session cookies and scheduled-task sessions.
     // 1. Prefer the session cookie (regular OAuth login).
     const cookies = this.parseCookies(req.headers.cookie);
     let sessionToken = cookies.get(COOKIE_NAME);
 
-    // 2. Fallback to the Authorization header (Preview auto-login via
-    //    sessionStorage), used when the browser blocks iframe cookies such as
-    //    Safari ITP, private browsing, or iOS/Android WebView.
-    if (!sessionToken) {
-      const authHeader = req.headers.authorization;
-      if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
-        sessionToken = authHeader.slice(7);
-      }
+    // 2. Legacy bearer-token fallback for scheduled tasks and preview sessions.
+    if (!sessionToken && typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+      sessionToken = authHeader.slice(7);
     }
 
     const session = await this.verifySession(sessionToken);

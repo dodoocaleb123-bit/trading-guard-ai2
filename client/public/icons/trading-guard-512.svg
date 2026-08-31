@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TradingGuardAI">
+  <rect width="512" height="512" rx="106" fill="#0f172a"/>
+  <path d="M112 336 192 256l59 48 133-150" fill="none" stroke="#38bdf8" stroke-width="37" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M317 154h67v67" fill="none" stroke="#f8fafc" stroke-width="27" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="112" cy="336" r="21" fill="#f8fafc"/>
+</svg>

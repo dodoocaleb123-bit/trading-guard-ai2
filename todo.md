@@ -1483,6 +1483,11 @@
 
 - [x] Harden Gemini structured-response normalization against intermittent provider wrappers and verify scanner/audit JSON paths with deterministic and live smoke tests
 
+- [x] Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the Render frontend Blueprint for the migrated Supabase OAuth flow
+- [x] Add regression coverage for the frontend Blueprint’s Supabase authentication variables
+
+- [x] Fix the reproducible Cherry AI CSS preload failure by statically importing AIChatBox and verify chat, typecheck, and production build paths
+
 - [x] Diagnose and fix Render protected tRPC 502 responses that leave Scanner diagnostics loading.
 - [ ] Verify split Supabase bearer authentication and backend route handling after the 502 fix.
 - [ ] Re-run production Scanner, v5 smoke, zone inventory, White AI, Cherry AI, tracking, and Telegram checks for a clean pass.

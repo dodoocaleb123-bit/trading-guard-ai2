@@ -12,3 +12,7 @@ services:
         value: JPWZdwvyAH9bH5mLVeVheV
       - key: VITE_OAUTH_PORTAL_URL
         value: https://manus.im
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
