@@ -119,8 +119,9 @@ describe("scanner context bounds", () => {
   });
 
   it("requires locator readiness and an allowed exact ratio for contradiction replacements", () => {
-    const base = { contradictionLocatorReady: true, entry: 100, stopLoss: 98, takeProfit: 104, decisionTrace: { levelDerivation: { selectedRiskReward: 2 } } };
+    const base = { verdict: "APPROVED", contradictionLocatorReady: true, entry: 100, stopLoss: 98, takeProfit: 104, decisionTrace: { levelDerivation: { selectedRiskReward: 2 } } };
     expect(isEligibleContradictoryReplacement(base)).toBe(true);
+    expect(isEligibleContradictoryReplacement({ ...base, verdict: "SKIPPED" })).toBe(false);
     expect(isEligibleContradictoryReplacement({ ...base, contradictionLocatorReady: false })).toBe(false);
     expect(isEligibleContradictoryReplacement({ ...base, decisionTrace: { levelDerivation: { selectedRiskReward: 1 } } })).toBe(false);
   });

@@ -124,10 +124,10 @@ export function safelyEvaluateBaselineIntelligence(input: Parameters<typeof eval
   }
 }
 
-export function isEligibleContradictoryReplacement(decision: { contradictionLocatorReady?: boolean; entry?: unknown; stopLoss?: unknown; takeProfit?: unknown; decisionTrace?: { levelDerivation?: { selectedRiskReward?: unknown } } }) {
+export function isEligibleContradictoryReplacement(decision: { verdict?: string; contradictionLocatorReady?: boolean; entry?: unknown; stopLoss?: unknown; takeProfit?: unknown; decisionTrace?: { levelDerivation?: { selectedRiskReward?: unknown } } }) {
   const selectedRiskReward = Number(decision.decisionTrace?.levelDerivation?.selectedRiskReward);
   const hasLevels = [decision.entry, decision.stopLoss, decision.takeProfit].every((value) => value != null && Number.isFinite(Number(value)));
-  return decision.contradictionLocatorReady === true && hasLevels && (ALLOWED_RISK_REWARD_RATIOS as readonly number[]).includes(selectedRiskReward);
+  return decision.verdict === "APPROVED" && decision.contradictionLocatorReady === true && hasLevels && (ALLOWED_RISK_REWARD_RATIOS as readonly number[]).includes(selectedRiskReward);
 }
 
 export function buildSignalDeliveryDedupeKey(signalId: number) {
@@ -510,8 +510,15 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
     const upgradeLocatorResult = activeSignal
       ? advanceEntryLocator({ previous: previousLocator ? { ...previousLocator, status: "WAITING" } : null, observation, hasOpenSignal: false })
       : null;
-    gated.contradictionLocatorReady = activeSignal ? Boolean(upgradeLocatorResult?.ready && paperSignalQualityApproved) : locatorReadyForEmission;
-    gated.contradictionLocatorReason = activeSignal ? (paperSignalQualityApproved ? upgradeLocatorResult?.reason ?? locatorResult.reason : `Contradiction monitor blocked: ${paperSignalQualityReason}`) : gated.entryLocatorReason;
+    const v5HierarchyApproved = gated.verdict === "APPROVED" && Boolean((market.replacementIntelligence as any)?.workflow?.eligible);
+    gated.contradictionLocatorReady = activeSignal ? Boolean(v5HierarchyApproved && upgradeLocatorResult?.ready && paperSignalQualityApproved) : locatorReadyForEmission;
+    gated.contradictionLocatorReason = activeSignal
+      ? !v5HierarchyApproved
+        ? `Contradiction monitor blocked before Entry Locator thresholds: v5 hierarchy judgment is ${gated.verdict}.`
+        : paperSignalQualityApproved
+          ? upgradeLocatorResult?.reason ?? locatorResult.reason
+          : `Contradiction monitor blocked after v5 approval: ${paperSignalQualityReason}`
+      : gated.entryLocatorReason;
     const qualitySafeLocatorState = !paperSignalQualityApproved && locatorResult.ready
       ? { ...locatorResult.state, status: "WAITING" as const, waitReason: `Entry Locator blocked emission: ${paperSignalQualityReason}` }
       : !strategyApproved || !v5LevelsComplete
@@ -615,7 +622,10 @@ async function monitorOpenSignalContradictions(userId: number, decisions: Array<
     try {
       const decision = decisions.find((candidate) => candidate.asset === signal.asset && candidate.timeframe === signal.timeframe);
       const market = decision?.market ?? seriesCache.get(`${signal.asset}:${signal.timeframe}`);
-      if (!decision?.direction || !market?.close) continue;
+      // Hierarchy judgment is the first gate. Do not inspect contradiction
+      // confidence/confluence or Entry Locator replacement readiness until the
+      // opposite candidate itself is an approved v5 structural plan.
+      if (decision?.verdict !== "APPROVED" || !decision?.direction || !market?.close) continue;
       const contradiction = detectPaperTradeContradiction(signal, Number(market.close), decision);
       if (!contradiction) continue;
       const signalDelivery = await getTelegramDeliveryForSignal(userId, signal.id, "SIGNAL");

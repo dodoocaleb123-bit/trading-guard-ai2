@@ -1518,3 +1518,6 @@
 - [x] Allow a qualified opposite v5 setup to reply to and replace a contradicted floating signal for the same asset/timeframe without bypassing existing confirmation gates.
 - [x] Send the contradiction warning only once per original floating signal, with durable idempotency across scanner cycles.
 - [x] Preserve paper-only status, tracking history, Telegram delivery auditability, and existing v5 confirmation/risk rules; add regression coverage.
+
+- [x] Require every contradicting replacement candidate to pass the complete v5 hierarchy judgment before Entry Locator confidence/confluence threshold checks.
+- [x] Add regression coverage proving a hierarchy-failed opposite setup cannot warn-as-replacement or emit a Telegram replacement, while a hierarchy-approved setup proceeds to Entry Locator checks.
