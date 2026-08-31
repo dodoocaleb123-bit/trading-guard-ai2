@@ -88,6 +88,10 @@ export function formatWhiteAiZoneFallback(zoneContext: ReturnType<typeof buildWh
   return `Persisted v5 zone evidence for ${zoneContext.asset} on ${zoneContext.timeframe}: status ${zoneContext.status}; ${zoneContext.snapshotCount} snapshots; latest observation ${zoneContext.observedAt ?? zoneContext.lastSnapshotAt ?? "not recorded"}. Detected zones: ${zones}. Support zone: ${level(zoneContext.supportZone)}. Resistance zone: ${level(zoneContext.resistanceZone)}. Next resistance/opposing upper level: ${level(zoneContext.nextResistance)}. Next support/opposing lower level: ${level(zoneContext.nextSupport)}. Target boundary: ${level(zoneContext.targetBoundary)}. Breakout state: ${level(zoneContext.breakoutState)}. These are recorded locator levels, not a chart image or a guarantee of future movement. This is analysis only — paper trading only — UNVALIDATED.`;
 }
 
+export function shouldUseDeterministicZoneFallback(channel: "WHITE" | "CHERRY", asksForZoneEvidence: boolean, zoneContext: unknown): boolean {
+  return channel === "WHITE" && asksForZoneEvidence && zoneContext != null;
+}
+
 export function buildWhiteAiSignalContext(signals: Array<{ id: number; asset: string; timeframe: string; direction: string; entry: string | number | null; stopLoss: string | number | null; takeProfit: string | number | null; riskReward: string | number | null; confidence: string | number | null; confluenceScore: string | number | null; rationale?: string | null; status: string; outcomeNote?: string | null; openedAt: Date | string | null; closedAt?: Date | string | null; telegramDelivery?: { status: string; deliveredAt?: Date | string | null } | null }>, asset: string) {
   const normalizedAsset = normalizeAsset(asset);
   const signal = signals.filter((row) => normalizeAsset(row.asset) === normalizedAsset).sort((a, b) => new Date(b.openedAt ?? 0).getTime() - new Date(a.openedAt ?? 0).getTime())[0];
@@ -335,6 +339,8 @@ export const appRouter = router({
         content = asksForZoneEvidence && zoneContext
           ? formatWhiteAiZoneFallback(zoneContext)
           : "Cherry AI is reserved for independent review of a complete trade idea. Please include BUY or SELL and the entry, stop-loss, or take-profit levels you want reviewed. No trade verdict or signal was created. This is analysis only — paper trading only — UNVALIDATED.";
+      } else if (zoneContext && shouldUseDeterministicZoneFallback(input.channel, asksForZoneEvidence, zoneContext)) {
+        content = formatWhiteAiZoneFallback(zoneContext);
       } else try {
         const response = await invokeLLM({ model: "gpt-5-mini", messages: [{ role: "system", content: system }, ...chatMessages], maxTokens: 1400 });
         const choice = response?.choices?.[0];
