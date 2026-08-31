@@ -1506,8 +1506,11 @@
 - [x] Record BTC/USD signals #17190003 and #17220003 as user-reported WINs at take profit, preserving the Twelve Data discrepancy in the audit note.
 - [x] Release the two signals from blocking new setups and verify tracking summaries and next-signal eligibility.
 
-- [ ] Run a fresh end-to-end audit of frontend, authentication, backend APIs, scanner cadence and retrieval, v5 zones and hierarchy, Entry Locator, White AI, Cherry AI, tracking, database, Telegram, and collective workflow.
-- [ ] Fix any confirmed application defects found during the audit and re-run the failed checks until they pass.
+- [x] Run a fresh end-to-end audit of frontend, authentication, backend APIs, scanner cadence and retrieval, v5 zones and hierarchy, Entry Locator, White AI, Cherry AI, tracking, database, Telegram, and collective workflow.
+- [x] Fix any confirmed application defects found during the audit and re-run the failed checks until they pass.
 
 - [x] Ensure White AI answers exact zone-evidence questions from persisted v5 records without approximate counts or an unnecessary long Gemini request.
 - [x] Add regression coverage for White AI’s deterministic exact-zone response path and re-run the full deterministic audit suite.
+
+- [x] Prevent the Manus development preview from throwing `supabaseUrl is required` when Render-only Vite Supabase variables are absent, while preserving the configured production client.
+- [x] Re-run the full deterministic suite, TypeScript check, and production build after the preview-runtime safeguard.
