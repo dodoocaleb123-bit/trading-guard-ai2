@@ -1527,3 +1527,7 @@
 - [x] Add regression coverage for resolved-parent replacement chains and duplicate-signal idempotency without changing tracking or paper-only boundaries.
 
 - [x] Add Monitoring visibility for replacement-chain lineage, resolved-parent state, and exact duplicate-suppression policy.
+
+- [x] Verify the live Monitoring surface and inspect current replacement-chain and Telegram evidence.
+- [x] Add durable visibility for exact duplicate-suppression attempts only if it can be done without altering v5 decisions or Telegram delivery behavior; existing unique Telegram/paper-adjustment dedupe keys and the Monitoring duplicate counter are retained, so no schema migration was necessary.
+- [x] Run final tests, deployment verification, and production smoke checks before ending the work session.
