@@ -2697,6 +2697,53 @@ function V5ZoneMap() {
   );
 }
 
+function ReplacementChainMonitoringCard() {
+  const adjustments = trpc.signals.adjustments.useQuery(undefined, LIVE_QUERY_OPTIONS);
+  const chains = trpc.signals.upgradeChains.useQuery(undefined, LIVE_QUERY_OPTIONS);
+  const rows = chains.data ?? [];
+  const resolvedParents = rows.filter(chain => chain.original && chain.original.status !== "PENDING").length;
+  const pendingReplacements = rows.filter(chain => chain.replacement?.status === "PENDING").length;
+  const latest = rows[0];
+  return (
+    <Card className="mt-6 border-primary/20 bg-primary/[0.025]">
+      <CardHeader>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="font-display text-xl">Replacement-chain integrity</CardTitle>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Read-only visibility into resolved-parent chaining, threaded replies, and exact duplicate suppression.
+            </p>
+          </div>
+          <Badge variant="outline" className="w-fit border-emerald-500/30 text-emerald-700">DEDUPLICATION ENFORCED</Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-3 sm:grid-cols-4">
+          <SummaryStat label="Adjustments" value={adjustments.data?.length ?? 0} tone="neutral" />
+          <SummaryStat label="Linked chains" value={rows.length} tone="neutral" />
+          <SummaryStat label="Closed parents" value={resolvedParents} tone="good" />
+          <SummaryStat label="Pending replacements" value={pendingReplacements} tone="neutral" />
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl border bg-background p-3 text-xs leading-5 text-muted-foreground">
+            <p className="font-semibold uppercase tracking-[0.14em] text-foreground">Chain rule</p>
+            <p className="mt-1">A later opposite setup can reply to the previous replacement only after the original parent is closed and the candidate passes v5 hierarchy approval followed by Entry Locator gates.</p>
+          </div>
+          <div className="rounded-xl border bg-background p-3 text-xs leading-5 text-muted-foreground">
+            <p className="font-semibold uppercase tracking-[0.14em] text-foreground">Exact identity</p>
+            <p className="mt-1">Asset, timeframe, direction, entry, stop, target, risk ratio, confidence, and confluence are checked before another signal or Telegram delivery is created.</p>
+          </div>
+        </div>
+        {latest && (
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            Latest linked chain: {latest.adjustment.asset} · {latest.adjustment.timeframe} · parent {latest.original?.status ?? "unavailable"} → replacement {latest.replacement?.status ?? "unavailable"}.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function MonitoringPage() {
   return (
     <>
@@ -2716,6 +2763,7 @@ function MonitoringPage() {
       <V5SmokeStatusCard />
       <V5DecisionTrend />
       <V5ZoneMap />
+      <ReplacementChainMonitoringCard />
     </>
   );
 }
