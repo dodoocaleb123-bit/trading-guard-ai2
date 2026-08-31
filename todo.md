@@ -1485,3 +1485,5 @@
 
 - [x] Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the Render frontend Blueprint for the migrated Supabase OAuth flow
 - [x] Add regression coverage for the frontend Blueprint’s Supabase authentication variables
+
+- [x] Fix the reproducible Cherry AI CSS preload failure by statically importing AIChatBox and verify chat, typecheck, and production build paths

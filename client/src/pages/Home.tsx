@@ -38,15 +38,10 @@ import {
   UploadCloud,
   Zap,
 } from "lucide-react";
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { AIChatBox } from "@/components/AIChatBox";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-
-const AIChatBox = lazy(() =>
-  import("@/components/AIChatBox").then(({ AIChatBox }) => ({
-    default: AIChatBox,
-  }))
-);
 
 const LIVE_QUERY_OPTIONS = {
   refetchInterval: 60_000,
