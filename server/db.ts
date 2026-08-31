@@ -380,13 +380,20 @@ export async function listAuditTrades(userId: number) {
   return attachTelegramDelivery(audits, deliveries, "AUDIT", "auditTradeId");
 }
 
+export async function claimTelegramDelivery(input: { userId: number; signalId?: number; kind: "SIGNAL" | "AUDIT" | "OUTCOME" | "SUMMARY" | "REASON" | "ADJUSTMENT"; dedupeKey: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const result = await db.insert(telegramDeliveries).values({ userId: input.userId, signalId: input.signalId ?? null, kind: input.kind, status: "FAILED", dedupeKey: input.dedupeKey, retryCount: 0, lastRetryAt: new Date() }).onDuplicateKeyUpdate({ set: { dedupeKey: sql`${telegramDeliveries.dedupeKey}` } });
+  return Number((result as any)[0]?.affectedRows ?? 0) === 1;
+}
+
 export async function recordTelegramDelivery(input: { userId: number; signalId?: number; auditTradeId?: number; kind: "SIGNAL" | "AUDIT" | "OUTCOME" | "SUMMARY" | "REASON" | "ADJUSTMENT"; status: "DELIVERED" | "FAILED"; telegramMessageId?: string; dedupeKey: string; error?: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   const now = new Date();
   const deliveredAt = input.status === "DELIVERED" ? now : null;
   const isOutcome = input.kind === "OUTCOME";
-  await db.insert(telegramDeliveries).values({ ...input, deliveredAt, retryCount: isOutcome ? 1 : 0, lastRetryAt: isOutcome ? now : null }).onDuplicateKeyUpdate({ set: { status: input.status, telegramMessageId: input.telegramMessageId ?? null, error: input.error ?? null, deliveredAt, retryCount: isOutcome ? sql`${telegramDeliveries.retryCount} + 1` : sql`${telegramDeliveries.retryCount}`, lastRetryAt: isOutcome ? now : sql`${telegramDeliveries.lastRetryAt}` } });
+  await db.insert(telegramDeliveries).values({ ...input, deliveredAt, retryCount: isOutcome ? 1 : 0, lastRetryAt: isOutcome ? now : null }).onDuplicateKeyUpdate({     set: { userId: input.userId, signalId: input.signalId ?? null, auditTradeId: input.auditTradeId ?? null, kind: input.kind, status: input.status, telegramMessageId: input.telegramMessageId ?? null, error: input.error ?? null, deliveredAt, retryCount: isOutcome ? sql`${telegramDeliveries.retryCount} + 1` : sql`${telegramDeliveries.retryCount}`, lastRetryAt: isOutcome ? now : sql`${telegramDeliveries.lastRetryAt}` } });
 }
 
 export async function listPaperTradeAdjustments(userId: number, limit = 100) {

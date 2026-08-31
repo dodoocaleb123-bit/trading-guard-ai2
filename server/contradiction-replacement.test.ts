@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildContradictionWarningDedupeKey, buildContradictoryReplacementDedupeKey, buildExactSignalFingerprint, canAdvanceReplacementChain } from "./scanner";
+import { buildContradictionWarningDedupeKey, buildContradictoryReplacementDedupeKey, buildExactSignalFingerprint, buildAtomicSignalFingerprint, canAdvanceReplacementChain } from "./scanner";
 import { detectPaperTradeContradiction } from "./paper-trade-adjustments";
 
 const signal = { id: 91, asset: "BTC/USD", timeframe: "15MIN", direction: "SELL" as const, entry: "100", stopLoss: "110", takeProfit: "80" };
@@ -35,6 +35,12 @@ describe("contradiction replacement delivery semantics", () => {
     expect(canAdvanceReplacementChain("SUPERSEDED")).toBe(true);
     expect(canAdvanceReplacementChain("WIN")).toBe(true);
     expect(canAdvanceReplacementChain(null)).toBe(true);
+  });
+
+  it("uses a shared atomic identity across users for one Telegram setup", () => {
+    const base = { asset: "BTC/USD", timeframe: "5MIN", direction: "BUY" as const, entry: "100", stopLoss: "98", takeProfit: "104", riskReward: "2.00", confidence: "80", confluenceScore: "75" };
+    expect(buildAtomicSignalFingerprint({ ...base, userId: 1 })).toBe(buildAtomicSignalFingerprint({ ...base, userId: 2 }));
+    expect(buildAtomicSignalFingerprint({ ...base, userId: 2, takeProfit: "105" })).not.toBe(buildAtomicSignalFingerprint({ ...base, userId: 1 }));
   });
 
   it("uses every setup field in the duplicate identity", () => {

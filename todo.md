@@ -1537,3 +1537,9 @@
 - [x] Save the final clean audit checkpoint with verified production evidence.
 
 - [x] Recover missing OUTCOME Telegram notifications for genuine live-resolved signals idempotently, while excluding manual/user-reported overrides and preserving existing tracking records.
+
+- [x] Reconcile the exact XAU/USD 5MIN signal’s scanner, v5 snapshot, creation, Telegram delivery, entry, and resolution timestamps.
+- [x] Determine whether recent outcome-recovery, replacement-chain, or duplicate-suppression changes caused stale-entry emission; fix any confirmed defect and add regression coverage.
+
+- [x] Reconcile duplicate XAU/USD 5MIN signals 17490001, 17490002, and 17490003 without deleting audit history.
+- [x] Make exact-signal duplicate prevention atomic across concurrent scanner workers and add regression coverage for the race.

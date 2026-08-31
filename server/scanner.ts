@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
+import { createHash } from "node:crypto";
 import { generatedSignals, users } from "../drizzle/schema";
-import { activateIntelligenceVersion, createIntelligenceComponent, createIntelligenceVersion, createPaperTradeAdjustment, createStrategyDecision, createStrategyLesson, ENTRY_LOCATOR_V5_GENERATION_MODE, getActiveIntelligenceVersion, buildBoundedRuleText, getAllRulesText, getDb, getEntryLocatorState, getRelevantRulesText, getTelegramDeliveryForSignal, hasExactGeneratedSignal, hasOpenGeneratedSignal, hasTelegramDelivery, claimOwnerAlert, getReplacementRootSignal, listAcceptedStrategyLessons, listFailedOutcomeDeliveries, listResolvedSignalsMissingOutcomeDelivery, listIntelligenceComponents, listV5ZoneHistory, listOpenCurrentV5Signals, listStrategyRules, recordStrategyEngineHealth, recordTelegramDelivery, saveEntryLocatorState, markOwnerAlertNotified, supersedeGeneratedSignal, updateStrategyEngineStatus, upsertV5ZoneHistory } from "./db";
+import { activateIntelligenceVersion, createIntelligenceComponent, createIntelligenceVersion, createPaperTradeAdjustment, createStrategyDecision, createStrategyLesson, ENTRY_LOCATOR_V5_GENERATION_MODE, getActiveIntelligenceVersion, buildBoundedRuleText, getAllRulesText, getDb, getEntryLocatorState, getRelevantRulesText, getTelegramDeliveryForSignal, hasExactGeneratedSignal, hasOpenGeneratedSignal, hasTelegramDelivery, claimTelegramDelivery, claimOwnerAlert, getReplacementRootSignal, listAcceptedStrategyLessons, listFailedOutcomeDeliveries, listResolvedSignalsMissingOutcomeDelivery, listIntelligenceComponents, listV5ZoneHistory, listOpenCurrentV5Signals, listStrategyRules, recordStrategyEngineHealth, recordTelegramDelivery, saveEntryLocatorState, markOwnerAlertNotified, supersedeGeneratedSignal, updateStrategyEngineStatus, upsertV5ZoneHistory } from "./db";
 import { buildMultiTimeframeContext } from "./market-context";
 import { fetchOfficialMacroContext } from "./official-macro";
 import { buildIntelligenceModel, compileExecutableComponents, evaluateExecutableIntelligence, type ExecutableComponent } from "./intelligence";
@@ -53,8 +54,16 @@ export function canAdvanceReplacementChain(parentStatus?: string | null) {
   return parentStatus == null || parentStatus !== "PENDING";
 }
 
-export function buildExactSignalFingerprint(input: { asset: string; timeframe: string; direction: "BUY" | "SELL"; entry: string | number; stopLoss: string | number; takeProfit: string | number; riskReward: string | number; confidence: string | number; confluenceScore: string | number }) {
-  return [input.asset, input.timeframe, input.direction, input.entry, input.stopLoss, input.takeProfit, input.riskReward, input.confidence, input.confluenceScore].join("|");
+export function buildExactSignalFingerprint(input: { userId?: string | number; asset: string; timeframe: string; direction: "BUY" | "SELL"; entry: string | number; stopLoss: string | number; takeProfit: string | number; riskReward: string | number; confidence: string | number; confluenceScore: string | number }) {
+  return [input.userId ?? "", input.asset, input.timeframe, input.direction, input.entry, input.stopLoss, input.takeProfit, input.riskReward, input.confidence, input.confluenceScore].join("|");
+}
+
+export function buildAtomicSignalFingerprint(input: { userId?: string | number; asset: string; timeframe: string; direction: "BUY" | "SELL"; entry: string | number; stopLoss: string | number; takeProfit: string | number; riskReward: string | number; confidence: string | number; confluenceScore: string | number }) {
+  return createHash("sha256").update([input.asset, input.timeframe, input.direction, input.entry, input.stopLoss, input.takeProfit, input.riskReward, input.confidence, input.confluenceScore].join("|")).digest("hex");
+}
+
+export function buildSharedSignalFingerprint(input: { asset: string; timeframe: string; direction: "BUY" | "SELL"; entry: string | number; stopLoss: string | number; takeProfit: string | number; riskReward: string | number; confidence: string | number; confluenceScore: string | number }) {
+  return createHash("sha256").update([input.asset, input.timeframe, input.direction, input.entry, input.stopLoss, input.takeProfit, input.riskReward, input.confidence, input.confluenceScore].join("|")).digest("hex");
 }
 
 export function resolveOutcome(direction: "BUY" | "SELL", price: number, stop: number, target: number, high = price, low = price, entry = price): "WIN" | "LOSS" | null {
@@ -614,7 +623,8 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
           console.info(`[Scanner] ${asset} ${timeframe} stronger setup upgrade already delivered; duplicate suppressed.`);
           continue;
         }
-        const [replacementResult] = await db.insert(generatedSignals).values({ userId, asset, timeframe, direction: approvedLevels.direction as "BUY" | "SELL", entry: String(approvedLevels.entry), stopLoss: String(approvedLevels.stopLoss), takeProfit: String(approvedLevels.takeProfit), riskReward: approvedLevels.riskReward.toFixed(2), confidence: String(approvedLevels.confidence), confluenceScore: String(gated.confluenceScore ?? 0), rationale: formatAuditResult(gated, market), intelligenceVersion: replacementModel.id, generationMode: ENTRY_LOCATOR_V5_GENERATION_MODE, intelligenceComponents: JSON.stringify(gated.decisionTrace?.supportingComponents ?? gated.ruleEvidence ?? []), marketRegime: gated.marketRegime ?? market.replacementMarketRegime ?? null, status: "PENDING" });
+        const replacementSignalInput = { userId, asset, timeframe, direction: approvedLevels.direction as "BUY" | "SELL", entry: String(approvedLevels.entry), stopLoss: String(approvedLevels.stopLoss), takeProfit: String(approvedLevels.takeProfit), riskReward: approvedLevels.riskReward.toFixed(2), confidence: String(approvedLevels.confidence), confluenceScore: String(gated.confluenceScore ?? 0), intelligenceVersion: replacementModel.id, generationMode: ENTRY_LOCATOR_V5_GENERATION_MODE, signalFingerprint: buildAtomicSignalFingerprint({ userId, asset, timeframe, direction: approvedLevels.direction as "BUY" | "SELL", entry: String(approvedLevels.entry), stopLoss: String(approvedLevels.stopLoss), takeProfit: String(approvedLevels.takeProfit), riskReward: approvedLevels.riskReward.toFixed(2), confidence: String(approvedLevels.confidence), confluenceScore: String(gated.confluenceScore ?? 0) }) };
+        const [replacementResult] = await db.insert(generatedSignals).values({ ...replacementSignalInput, rationale: formatAuditResult(gated, market), intelligenceComponents: JSON.stringify(gated.decisionTrace?.supportingComponents ?? gated.ruleEvidence ?? []), marketRegime: gated.marketRegime ?? market.replacementMarketRegime ?? null, status: "PENDING" });
         const replacementSignalId = Number(replacementResult.insertId);
         const upgradeReason = buildUpgradePaperAdjustmentReason(upgrade);
         await supersedeGeneratedSignal(activeSignal.id, replacementSignalId, upgradeReason);
@@ -630,7 +640,7 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
         continue;
       }
       const rationale = formatAuditResult(gated, market);
-      const exactSignalInput = { userId, asset, timeframe, direction: approvedLevels.direction as "BUY" | "SELL", entry: String(approvedLevels.entry), stopLoss: String(approvedLevels.stopLoss), takeProfit: String(approvedLevels.takeProfit), riskReward: approvedLevels.riskReward.toFixed(2), confidence: String(approvedLevels.confidence), confluenceScore: String(gated.confluenceScore ?? 0), intelligenceVersion: replacementModel.id, generationMode: ENTRY_LOCATOR_V5_GENERATION_MODE };
+      const exactSignalInput = { userId, asset, timeframe, direction: approvedLevels.direction as "BUY" | "SELL", entry: String(approvedLevels.entry), stopLoss: String(approvedLevels.stopLoss), takeProfit: String(approvedLevels.takeProfit), riskReward: approvedLevels.riskReward.toFixed(2), confidence: String(approvedLevels.confidence), confluenceScore: String(gated.confluenceScore ?? 0), intelligenceVersion: replacementModel.id, generationMode: ENTRY_LOCATOR_V5_GENERATION_MODE, signalFingerprint: buildAtomicSignalFingerprint({ userId, asset, timeframe, direction: approvedLevels.direction as "BUY" | "SELL", entry: String(approvedLevels.entry), stopLoss: String(approvedLevels.stopLoss), takeProfit: String(approvedLevels.takeProfit), riskReward: approvedLevels.riskReward.toFixed(2), confidence: String(approvedLevels.confidence), confluenceScore: String(gated.confluenceScore ?? 0) }) };
       if (await hasExactGeneratedSignal(exactSignalInput)) {
         console.info(`[Scanner] ${asset} ${timeframe} exact setup already exists (${buildExactSignalFingerprint(exactSignalInput)}); duplicate signal suppressed.`);
         continue;
@@ -687,7 +697,7 @@ async function monitorOpenSignalContradictions(userId: number, decisions: Array<
       let action: "REVIEW_DIRECTION" | "TIGHTEN_STOP" | "EXIT_PAPER_SETUP" | "UPGRADE_PAPER_SETUP" = contradiction.action;
       let reason = contradiction.reason;
       if (replacementReady) {
-        const replacementSignalInput = { userId, asset: signal.asset, timeframe: signal.timeframe, direction: contradiction.observedDirection as "BUY" | "SELL", entry: String(decision.entry), stopLoss: String(decision.stopLoss), takeProfit: String(decision.takeProfit), riskReward: selectedRiskReward.toFixed(2), confidence: String(decision.confidence), confluenceScore: String(decision.confluenceScore), intelligenceVersion: "forex-trading-combined-document-v5", generationMode: ENTRY_LOCATOR_V5_GENERATION_MODE };
+        const replacementSignalInput = { userId, asset: signal.asset, timeframe: signal.timeframe, direction: contradiction.observedDirection as "BUY" | "SELL", entry: String(decision.entry), stopLoss: String(decision.stopLoss), takeProfit: String(decision.takeProfit), riskReward: selectedRiskReward.toFixed(2), confidence: String(decision.confidence), confluenceScore: String(decision.confluenceScore), intelligenceVersion: "forex-trading-combined-document-v5", generationMode: ENTRY_LOCATOR_V5_GENERATION_MODE, signalFingerprint: buildAtomicSignalFingerprint({ userId, asset: signal.asset, timeframe: signal.timeframe, direction: contradiction.observedDirection as "BUY" | "SELL", entry: String(decision.entry), stopLoss: String(decision.stopLoss), takeProfit: String(decision.takeProfit), riskReward: selectedRiskReward.toFixed(2), confidence: String(decision.confidence), confluenceScore: String(decision.confluenceScore) }) };
         if (await hasExactGeneratedSignal(replacementSignalInput)) {
           console.info(`[Adjustment] ${signal.asset} ${signal.timeframe} exact replacement already exists (${buildExactSignalFingerprint(replacementSignalInput)}); duplicate signal suppressed.`);
           continue;

@@ -75,6 +75,8 @@ export const generatedSignals = mysqlTable("generated_signals", {
   intelligenceVersion: varchar("intelligenceVersion", { length: 64 }),
   /** Null for legacy rows; ENTRY_LOCATOR_V5 for current stateful locator emissions. */
   generationMode: varchar("generationMode", { length: 32 }),
+  /** SHA-256 identity of the complete v5 setup; nullable for legacy rows. */
+  signalFingerprint: varchar("signalFingerprint", { length: 64 }),
   intelligenceComponents: mediumtext("intelligenceComponents"),
   marketRegime: varchar("marketRegime", { length: 128 }),
   status: mysqlEnum("status", ["PENDING", "WIN", "LOSS", "INVALIDATED", "SUPERSEDED"]).default("PENDING").notNull(),
@@ -91,7 +93,9 @@ export const generatedSignals = mysqlTable("generated_signals", {
   resolutionHigh: decimal("resolutionHigh", { precision: 18, scale: 8 }),
   resolutionLow: decimal("resolutionLow", { precision: 18, scale: 8 }),
   resolutionUsedIntrabar: boolean("resolutionUsedIntrabar"),
-});
+}, (table) => ({
+  signalFingerprintUnique: unique("generated_signals_signal_fingerprint_unique").on(table.signalFingerprint),
+}));
 
 export const auditTrades = mysqlTable("audit_trades", {
   id: int("id").autoincrement().primaryKey(),

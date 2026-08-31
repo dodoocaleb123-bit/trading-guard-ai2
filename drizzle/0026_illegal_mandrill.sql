@@ -1,0 +1,2 @@
+ALTER TABLE `generated_signals` ADD `signalFingerprint` varchar(64);--> statement-breakpoint
+ALTER TABLE `generated_signals` ADD CONSTRAINT `generated_signals_signal_fingerprint_unique` UNIQUE(`signalFingerprint`);
