@@ -7,6 +7,14 @@ import { isStaleScannerRun, summarizeScannerCadence } from "./scheduler-status";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+// Dashboard reads must remain bounded on Render's 512 MB free instance. Full
+// market snapshots and evidence are retained in the database; only the views
+// that need them should request them, and all live dashboard collections have a
+// deliberate upper bound.
+export const SCANNER_DASHBOARD_LIMIT = 120;
+export const SCANNER_SMOKE_LIMIT = 200;
+export const SCANNER_DELIVERY_LIMIT = 500;
+
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
@@ -347,9 +355,9 @@ export async function listEntryLocatorStates(userId: number) {
   const db = await getDb();
   if (!db) return [];
   const [states, signals, deliveries] = await Promise.all([
-    db.select().from(entryLocatorStates).where(eq(entryLocatorStates.userId, userId)).orderBy(desc(entryLocatorStates.updatedAt)),
-    db.select().from(generatedSignals).where(and(eq(generatedSignals.userId, userId), eq(generatedSignals.intelligenceVersion, "forex-trading-combined-document-v5"), eq(generatedSignals.status, "PENDING"))).orderBy(desc(generatedSignals.openedAt)),
-    db.select().from(telegramDeliveries).where(eq(telegramDeliveries.userId, userId)),
+    db.select().from(entryLocatorStates).where(eq(entryLocatorStates.userId, userId)).orderBy(desc(entryLocatorStates.updatedAt)).limit(SCANNER_DASHBOARD_LIMIT),
+    db.select().from(generatedSignals).where(and(eq(generatedSignals.userId, userId), eq(generatedSignals.intelligenceVersion, "forex-trading-combined-document-v5"), eq(generatedSignals.status, "PENDING"))).orderBy(desc(generatedSignals.openedAt)).limit(SCANNER_DASHBOARD_LIMIT),
+    db.select().from(telegramDeliveries).where(eq(telegramDeliveries.userId, userId)).orderBy(desc(telegramDeliveries.createdAt)).limit(SCANNER_DELIVERY_LIMIT),
   ]);
   return states.map((state) => {
     const matchingSignal = signals.find((signal) => signal.asset === state.asset && signal.timeframe === state.timeframe) ?? null;
@@ -692,7 +700,7 @@ export async function getLiveMarketPulse(userId: number): Promise<LiveMarketPuls
 export async function listStrategyDecisions(userId: number, filters: DecisionFilters = {}) {
   const db = await getDb();
   if (!db) return [];
-  const rows = await db.select().from(strategyDecisionLedger).where(eq(strategyDecisionLedger.userId, userId)).orderBy(desc(strategyDecisionLedger.createdAt)).limit(500);
+  const rows = await db.select().from(strategyDecisionLedger).where(eq(strategyDecisionLedger.userId, userId)).orderBy(desc(strategyDecisionLedger.createdAt)).limit(SCANNER_DASHBOARD_LIMIT);
   return filterStrategyDecisions(rows, filters);
 }
 
@@ -701,9 +709,9 @@ export async function getV5HierarchySmokeStatus(userId: number, lookbackMinutes 
   if (!db) return { ok: false, reason: "Database is unavailable.", checkedDecisions: 0, qualified: 0, waiting: 0, actualRatios: [], latestCycleAt: null as Date | null, payloadChecks: [], zoneInventory: { total: 0, active: 0, weakened: 0, invalidated: 0 } };
   const since = new Date(Date.now() - lookbackMinutes * 60_000);
   const [decisions, runs, zoneHistory] = await Promise.all([
-    db.select().from(strategyDecisionLedger).where(and(eq(strategyDecisionLedger.userId, userId), gte(strategyDecisionLedger.createdAt, since))).orderBy(desc(strategyDecisionLedger.createdAt)).limit(500),
+    db.select({ id: strategyDecisionLedger.id, asset: strategyDecisionLedger.asset, timeframe: strategyDecisionLedger.timeframe, marketSnapshot: strategyDecisionLedger.marketSnapshot, createdAt: strategyDecisionLedger.createdAt }).from(strategyDecisionLedger).where(and(eq(strategyDecisionLedger.userId, userId), gte(strategyDecisionLedger.createdAt, since))).orderBy(desc(strategyDecisionLedger.createdAt)).limit(SCANNER_SMOKE_LIMIT),
     db.select().from(scannerRunLedger).where(and(gte(scannerRunLedger.finishedAt, since), eq(scannerRunLedger.status, "SUCCEEDED"))).orderBy(desc(scannerRunLedger.finishedAt)).limit(20),
-    db.select({ lifecycle: v5ZoneHistory.lifecycle }).from(v5ZoneHistory).where(eq(v5ZoneHistory.userId, userId)).limit(500),
+    db.select({ lifecycle: v5ZoneHistory.lifecycle }).from(v5ZoneHistory).where(eq(v5ZoneHistory.userId, userId)).limit(SCANNER_SMOKE_LIMIT),
   ]);
   const payloadChecks = decisions.map((decision) => {
     try {
@@ -736,7 +744,7 @@ export async function getV5HierarchySmokeStatus(userId: number, lookbackMinutes 
 export async function listStrategyDecisionsSince(userId: number, since: Date) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(strategyDecisionLedger).where(and(eq(strategyDecisionLedger.userId, userId), gte(strategyDecisionLedger.createdAt, since))).orderBy(desc(strategyDecisionLedger.createdAt)).limit(500);
+  return db.select().from(strategyDecisionLedger).where(and(eq(strategyDecisionLedger.userId, userId), gte(strategyDecisionLedger.createdAt, since))).orderBy(desc(strategyDecisionLedger.createdAt)).limit(SCANNER_DASHBOARD_LIMIT);
 }
 
 export async function hasRecentStrategyDecision(userId: number, cooldownKey: string, since: Date) {

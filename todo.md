@@ -1482,3 +1482,7 @@
 - [x] Validate the integration and publish the Gemini replacement release
 
 - [x] Harden Gemini structured-response normalization against intermittent provider wrappers and verify scanner/audit JSON paths with deterministic and live smoke tests
+
+- [x] Diagnose and fix Render protected tRPC 502 responses that leave Scanner diagnostics loading.
+- [ ] Verify split Supabase bearer authentication and backend route handling after the 502 fix.
+- [ ] Re-run production Scanner, v5 smoke, zone inventory, White AI, Cherry AI, tracking, and Telegram checks for a clean pass.
