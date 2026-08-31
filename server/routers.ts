@@ -115,6 +115,12 @@ export function buildStrategyRuleRecord(input: { userId: number; title: string; 
   return { userId: input.userId, title: input.title, sourceType: input.sourceType, sourceFileName: input.fileName, content: input.content, storageKey: input.storageKey, supabaseId: input.supabaseId };
 }
 
+export function isCompleteTradeIdea(signal: string): boolean {
+  const hasDirection = /\b(BUY|SELL)\b/i.test(signal);
+  const hasPriceField = /\b(entry|stop\s*loss|take\s*profit|tp|sl)\s*[:=]/i.test(signal);
+  return hasDirection && hasPriceField;
+}
+
 export function buildReplacementManualAuditResult(signal: string, asset: string, timeframe: "15MIN" | "5MIN" | "1H", market: MarketSnapshot, decision: ReplacementDecision) {
   const submittedDirection = signal.match(/\b(BUY|SELL)\b/i)?.[1]?.toUpperCase() as "BUY" | "SELL" | undefined;
   const directionMatches = !submittedDirection || submittedDirection === decision.direction;
@@ -317,13 +323,19 @@ export const appRouter = router({
       const asksForSignalExplanation = /\b(stop\s*loss|take\s*profit|risk(?:-to-)?reward|entry|trade\s*signal|signal)\b/i.test(latest);
       const zoneContext = requestedAsset ? buildWhiteAiZoneContext(locatorStates, requestedAsset, requestedTimeframe, zoneHistory) : null;
       const signalContext = requestedAsset && asksForSignalExplanation ? buildWhiteAiSignalContext(recentSignalRecords, requestedAsset) : null;
+      const isTradeIdea = isCompleteTradeIdea(latest);
       const system = [
         "You are White AI, Trading Guard AI's interactive app-explanation and trading-education assistant. Have a natural, useful conversation about this app's v5 workflow, scanner health, zones, hierarchy judgments, Entry Locator decisions, paper-trading records, market structure, risk, and the user's ingested forex document. Explain why the app sends or withholds signals using supplied evidence. Never invent live prices, zone positions, scanner cycles, or performance. Distinguish clearly between live market observations, persisted app records, and general educational explanations. The app's v5 signal workflow is authoritative: 4H bias, 1H context only, independent 15M/5M execution, structural target/stop geometry, 60% confidence, 45% confluence, Entry Locator final guard, strict asset/timeframe locks, Telegram delivery, and paper-only UNVALIDATED safeguards. Chat must never place, alter, release, or approve an automatic v5 trade signal. Every response must state or preserve that this is analysis only, paper trading only, and UNVALIDATED; never promise accuracy or present personalized financial advice. If a requested fact is unavailable, say so plainly.",
+        "Cherry AI is an independent trade-review assistant. It may issue a trade-review verdict only when the user's message contains a complete trade idea with BUY or SELL plus at least one explicit price field such as Entry, Stop Loss, or Take Profit. For zone, education, scanner, or other informational questions without a complete trade idea, never default to BUY, SELL, TRADE APPROVED, or any market verdict; answer with grounded evidence when available or ask for the complete setup to review.",
         "Answer questions such as which asset appears more predictable from the available sample, the current paper context for gold, recent wins, the best-performing timeframe, the lowest-performing asset, and which asset has the least stable evidence. Use only resolved samples for win-rate claims, state sample sizes, and say when evidence is insufficient. Conversation memory is advisory context only and must never become a v5 rule.",
         `Relevant strategy rules for this question:\n${rulesText || "No matching rule excerpt was found."}\n\nBounded stored forex-document knowledge:\n${documentText || "No stored forex document is available."}\n\nPaper outcomes in last 24 hours:\n${assetPerformance}\n\nPersistent White AI conversation memory (advisory, not v5 rules):\n${memories.map((memory) => `[${memory.memoryType}] ${memory.content}`).join("\\n") || "No conversation memory has been saved yet."}\n\nBounded full outcome analytics from the app:\n${compactWhiteAiJson(analyticsContext, 12000)}\n\nRecent signal records with delivery and outcome fields:\n${compactWhiteAiJson(compactSignals, 10000)}\n\nStrategy judgment totals:\n${compactWhiteAiJson(judgment, 6000)}\n\nScanner freshness and cadence:\n${compactWhiteAiJson({ latestSuccessfulAt: cadence.latestSuccessfulAt, latestSuccessfulSource: cadence.latestSuccessfulSource, completedCycles: cadence.completedCycles, failedCycles: cadence.failedCycles, expectedIntervalMinutes: cadence.expectedIntervalMinutes })}\n\nV5 production smoke:\n${compactWhiteAiJson(smoke, 6000)}\n\nCurrent Entry Locator states:\n${compactWhiteAiJson(compactLocatorStates, 8000)}\n\nRecent v5 decision ledger:\n${compactWhiteAiJson(compactRecentDecisions, 10000)}\n\nRequested live market context:\n${marketText}\n\nRequested persisted v5 zone evidence:\n${zoneContext ? compactWhiteAiJson(zoneContext, 5000) : "No specific asset/timeframe zone request detected."}\n\nRequested persisted v5 signal explanation evidence:\n${signalContext ? compactWhiteAiJson(signalContext, 6000) : "No specific signal explanation request detected."}`
       ].join("\n\n");
       let content: string;
-      try {
+      if (input.channel === "CHERRY" && !isTradeIdea) {
+        content = asksForZoneEvidence && zoneContext
+          ? formatWhiteAiZoneFallback(zoneContext)
+          : "Cherry AI is reserved for independent review of a complete trade idea. Please include BUY or SELL and the entry, stop-loss, or take-profit levels you want reviewed. No trade verdict or signal was created. This is analysis only — paper trading only — UNVALIDATED.";
+      } else try {
         const response = await invokeLLM({ model: "gpt-5-mini", messages: [{ role: "system", content: system }, ...chatMessages], maxTokens: 1400 });
         const choice = response?.choices?.[0];
         if (!choice?.message) throw new Error("LLM response missing readable message");

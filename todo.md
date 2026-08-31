@@ -1495,3 +1495,4 @@
 - [x] Diagnose why the v5 persistent zone inventory shows zero zones for every asset and timeframe despite incoming market data.
 - [x] Reproduce zone detection on real persisted market payloads and verify whether detection, reconciliation, or dashboard retrieval is dropping zones.
 - [x] Correct zone persistence if needed without changing v5 confirmation, risk, timeframe, tracking, or Telegram boundaries, then add regression coverage.
+- [x] Prevent Cherry AI from defaulting non-trade informational questions to BUY/TRADE APPROVED; return grounded informational responses or request a complete trade setup.
