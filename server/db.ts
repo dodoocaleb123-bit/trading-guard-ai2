@@ -11,9 +11,9 @@ let _db: ReturnType<typeof drizzle> | null = null;
 // market snapshots and evidence are retained in the database; only the views
 // that need them should request them, and all live dashboard collections have a
 // deliberate upper bound.
-export const SCANNER_DASHBOARD_LIMIT = 120;
-export const SCANNER_SMOKE_LIMIT = 200;
-export const SCANNER_DELIVERY_LIMIT = 500;
+export const SCANNER_DASHBOARD_LIMIT = 24;
+export const SCANNER_SMOKE_LIMIT = 48;
+export const SCANNER_DELIVERY_LIMIT = 100;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
