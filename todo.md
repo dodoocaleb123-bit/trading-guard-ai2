@@ -1482,3 +1482,6 @@
 - [x] Validate the integration and publish the Gemini replacement release
 
 - [x] Harden Gemini structured-response normalization against intermittent provider wrappers and verify scanner/audit JSON paths with deterministic and live smoke tests
+
+- [x] Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to the Render frontend Blueprint for the migrated Supabase OAuth flow
+- [x] Add regression coverage for the frontend Blueprint’s Supabase authentication variables

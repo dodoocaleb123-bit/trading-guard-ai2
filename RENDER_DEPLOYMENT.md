@@ -54,9 +54,11 @@ Set these build-time environment variables on the Render Static Site:
 VITE_API_BASE_URL=https://tradingai-jpwzdwvy.manus.space
 VITE_APP_ID=JPWZdwvyAH9bH5mLVeVheV
 VITE_OAUTH_PORTAL_URL=https://manus.im
+VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+VITE_SUPABASE_ANON_KEY=YOUR_PUBLIC_SUPABASE_ANON_KEY
 ```
 
-The Render interface will then send tRPC requests to the Manus backend at `https://tradingai-jpwzdwvy.manus.space/api/trpc`. The existing Manus backend continues to own the database, v5 engine, zone memory, White AI, Cherry AI, scanner, tracking, and Telegram delivery. Do not add `DATABASE_URL`, `GEMINI_API_KEY`, or Telegram bot tokens to the Render Static Site.
+The Render interface must also receive the public Supabase project URL and anon key at build time so `supabase.auth.signInWithOAuth` can initialize in the browser. The anon key is intended for browser use, but the Supabase service-role key must never be exposed. The Render interface will then send tRPC requests to the Manus backend at `https://tradingai-jpwzdwvy.manus.space/api/trpc`. The existing Manus backend continues to own the database, v5 engine, zone memory, White AI, Cherry AI, scanner, tracking, and Telegram delivery. Do not add `DATABASE_URL`, `GEMINI_API_KEY`, or Telegram bot tokens to the Render Static Site.
 
 Set the Manus backend’s `FRONTEND_ORIGIN` to the exact Render Static Site URL after Render assigns it. The OAuth callback remains on the Manus backend:
 
