@@ -125,6 +125,10 @@ export function isCompleteTradeIdea(signal: string): boolean {
   return hasDirection && hasPriceField;
 }
 
+export function buildCherryInformationalResponse() {
+  return "Cherry AI is reserved for independent review of a complete trade idea. Please include BUY or SELL and the entry, stop-loss, or take-profit levels you want reviewed. No trade verdict or signal was created. This is analysis only — paper trading only — UNVALIDATED.";
+}
+
 export function buildReplacementManualAuditResult(signal: string, asset: string, timeframe: "15MIN" | "5MIN" | "1H", market: MarketSnapshot, decision: ReplacementDecision) {
   const submittedDirection = signal.match(/\b(BUY|SELL)\b/i)?.[1]?.toUpperCase() as "BUY" | "SELL" | undefined;
   const directionMatches = !submittedDirection || submittedDirection === decision.direction;
@@ -257,6 +261,11 @@ export const appRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database unavailable");
       await db.insert(auditMessages).values({ userId: ctx.user.id, channel: "CHERRY", role: "user", content: input.signal });
+      if (!isCompleteTradeIdea(input.signal)) {
+        const content = buildCherryInformationalResponse();
+        await db.insert(auditMessages).values({ userId: ctx.user.id, channel: "CHERRY", role: "assistant", content });
+        return { role: "assistant" as const, content, verdict: null, confidence: null, telegramDelivered: false };
+      }
       const assetMatch = input.signal.match(/(?:asset|symbol)\s*:\s*([A-Za-z/]+)|\b(EUR\/?USD|GBP\/?USD|XAU\/?USD|BTC\/?USD)\b/i);
       const asset = normalizeAsset(assetMatch?.[1] ?? assetMatch?.[2] ?? "EUR/USD");
       const timeframeMatch = input.signal.match(/(?:timeframe|tf)\s*[:=]\s*(15\s*MIN|5\s*MIN|1\s*H|15M|5M|1H)\b/i) ?? input.signal.match(/\b(15\s*MIN|5\s*MIN|1\s*H|15M|5M|1H)\b/i);
@@ -338,7 +347,7 @@ export const appRouter = router({
       if (input.channel === "CHERRY" && !isTradeIdea) {
         content = asksForZoneEvidence && zoneContext
           ? formatWhiteAiZoneFallback(zoneContext)
-          : "Cherry AI is reserved for independent review of a complete trade idea. Please include BUY or SELL and the entry, stop-loss, or take-profit levels you want reviewed. No trade verdict or signal was created. This is analysis only — paper trading only — UNVALIDATED.";
+          : buildCherryInformationalResponse();
       } else if (zoneContext && shouldUseDeterministicZoneFallback(input.channel, asksForZoneEvidence, zoneContext)) {
         content = formatWhiteAiZoneFallback(zoneContext);
       } else try {

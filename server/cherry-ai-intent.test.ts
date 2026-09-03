@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isCompleteTradeIdea } from "./routers";
+import { buildCherryInformationalResponse, isCompleteTradeIdea } from "./routers";
 
 describe("Cherry AI trade-review intent", () => {
   it("accepts a directional setup with an explicit price field", () => {
@@ -11,5 +11,12 @@ describe("Cherry AI trade-review intent", () => {
     expect(isCompleteTradeIdea("Which zones were marked out in the 1 hour and 4 hour timeframe by v5?")).toBe(false);
     expect(isCompleteTradeIdea("What does risk management mean?")).toBe(false);
     expect(isCompleteTradeIdea("BUY XAU/USD")).toBe(false);
+  });
+
+  it("provides a non-verdict response for incomplete ideas", () => {
+    const response = buildCherryInformationalResponse();
+    expect(response).toContain("No trade verdict or signal was created");
+    expect(response).not.toContain("TRADE APPROVED");
+    expect(response).not.toContain("TRADE DENIED");
   });
 });
