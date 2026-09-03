@@ -152,8 +152,8 @@ describe("dashboard terminology", () => {
   it("keeps White AI and Cherry AI chat channels separate", () => {
     expect(homeSource).toContain("trpc.audit.history.useQuery({ channel: assistant }");
     expect(homeSource).toContain("clearConversation.mutate({ channel: assistant })");
-    expect(homeSource).toContain('channel: "WHITE"');
     expect(homeSource).toContain("channel: assistant");
+    expect(homeSource).toContain("routeChatSubmission(assistant, signal, mode)");
   });
 
   it("exposes the signal delivery status and orphan-state warnings", () => {

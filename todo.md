@@ -1576,3 +1576,22 @@
 - [x] Replace misleading callback-only wording with explicit external-trigger ownership when Heartbeat is not configured
 - [x] Add regression coverage for external-trigger versus Heartbeat callback display
 - [x] Run validation and publish the UI clarification
+
+## Current task: bounded full-system production audit
+
+- [x] Establish the current GitHub, Render, database, and published-version baseline without exposing secrets
+- [x] Verify recent scanner cadence, provider availability, run idempotency, and five-minute execution evidence
+- [x] Verify v5 hierarchy persistence, timeframe ownership, zone memory, qualification gates, and executable risk geometry
+- [x] Verify Entry Locator follows v5 approval, confidence/confluence, exact-ratio, contradiction, and duplicate-suppression boundaries
+- [x] Verify generated-signal tracking, WIN/LOSS/PENDING resolution, outcome recovery, and non-blocking closed trades
+- [x] Verify Telegram signal, contradiction-warning, replacement-thread, and outcome-delivery ledgers remain internally consistent
+- [x] Verify Supabase authentication and protected route behavior in the live application
+- [x] Verify White AI app-aware deterministic answers and bounded Gemini fallback behavior
+- [ ] Verify Cherry AI independent-audit routing does not generate v5 signals or Telegram activity
+- [x] Verify Monitoring accurately reflects scanner, provider, v5 smoke, zones, duplicates, and replacement-chain state
+- [x] Run focused deterministic tests, TypeScript validation, production build, and browser/visual checks
+- [ ] Fix only confirmed defects, add regression coverage, and publish a checkpoint if source changes are required
+- [ ] Record residual external-service risks separately from application defects and deliver the bounded audit report
+
+- [x] Fix confirmed production Cherry AI regression: general educational questions must not be treated as trade audits or return APPROVED/DENIED verdicts
+- [x] Add regression coverage for Cherry AI education routing and verify no audit-trade or Telegram side effect

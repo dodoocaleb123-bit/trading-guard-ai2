@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { formatChatError } from "@/lib/chat-errors";
+import { routeChatSubmission } from "@/lib/chat-intent";
 import {
   BookOpen,
   CheckCircle2,
@@ -1056,7 +1057,7 @@ function ChatAudit({ assistant = "WHITE" }: { assistant?: "WHITE" | "CHERRY" } =
       setMessages(prev => [...prev, result]);
       history.refetch();
     },
-    onError: e => toast.error(formatChatError(e, "White AI")),
+    onError: e => toast.error(formatChatError(e, isCherry ? "Cherry AI" : "White AI")),
   });
   const clearConversation = trpc.audit.clearConversation.useMutation({
     onSuccess: () => {
@@ -1074,13 +1075,13 @@ function ChatAudit({ assistant = "WHITE" }: { assistant?: "WHITE" | "CHERRY" } =
       { role: "user" as const, content: signal },
     ];
     setMessages(nextMessages);
-    if (isCherry || mode === "AUDIT")
+    if (routeChatSubmission(assistant, signal, mode) === "AUDIT") {
       audit.mutate({
         signal: signal.length >= 8 ? signal : `Audit: ${signal}`,
       });
-    else
+    } else {
       conversation.mutate({
-        channel: "WHITE",
+        channel: assistant,
         messages: nextMessages
           .slice(-24)
           .map(message => ({
@@ -1091,6 +1092,7 @@ function ChatAudit({ assistant = "WHITE" }: { assistant?: "WHITE" | "CHERRY" } =
             content: message.content,
           })),
       });
+    }
   };
   const exportConversation = () => {
     const text = combined
