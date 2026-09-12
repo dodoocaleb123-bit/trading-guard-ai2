@@ -1787,3 +1787,12 @@
 - [x] Retain each asset channel’s own displacement standard
 - [x] Prepare the direct-replacement implementation checklist with provider probes, safety gates, and rollback checks
 - [x] Do not change code, secrets, configuration, database behavior, or live Telegram behavior until explicit implementation authorization
+
+
+## Current task: detailed v7 workflow explanation
+
+- [x] Explain scanner ingestion and data validation for the four channels
+- [x] Explain BTC/USD, EUR/USD, GBP/USD, and XAU/USD channel workflows separately
+- [x] Explain the independent non-BTC news-warning and NEWS-EVENT path
+- [x] Explain Entry Locator, universal safety gates, Telegram delivery, tracking, and Monitoring
+- [x] Explain direct-replacement preflight and confirm no code or GitHub push occurred
