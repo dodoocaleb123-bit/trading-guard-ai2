@@ -1595,3 +1595,195 @@
 
 - [x] Fix confirmed production Cherry AI regression: general educational questions must not be treated as trade audits or return APPROVED/DENIED verdicts
 - [x] Add regression coverage for Cherry AI education routing and verify no audit-trade or Telegram side effect
+
+
+## Current task: exact four-channel strategy fidelity review
+
+- [x] Re-read all four uploaded asset strategy documents and normalize mandatory versus optional rules
+- [x] Build a rule-by-rule fidelity matrix for XAU/USD, GBP/USD, EUR/USD, and BTC/USD channels
+- [x] Separate source-defined strategy rules from shared v5 safety, delivery, tracking, and observability infrastructure
+- [x] Identify every proposed extra, omitted rule, unresolved definition, and data requirement
+- [x] Deliver an approval-ready exact implementation contract without modifying code
+
+
+## Current task: XAU/USD video strategy extraction
+
+- [x] Inventory the uploaded XAU/USD video archive without executing any embedded artifacts
+- [x] Analyze each video and extract the source-defined XAU/USD trading rules
+- [x] Separate mandatory rules, optional guidance, and unresolved subjective definitions
+- [x] Produce a mechanical XAU/USD v5 channel specification that replaces the old strategy conceptually
+- [ ] Do not modify code until the user explicitly approves the proposed specification
+
+
+## Current task: XAU/USD dependency-readiness design
+
+- [x] Inventory the current data-provider and scanner capability gaps for the locked XAU/USD rules
+- [x] Define provider and credential requirements for XAG/USD, live quote/spread, 1M OHLC, and Trading Economics
+- [x] Define freshness validation, fail-closed WAIT behavior, and no-fabricated-data rules
+- [x] Define Monitoring metrics and alerts for each dependency
+- [x] Define shadow-mode rollout, quota/cost controls, and production activation gates
+- [x] Deliver an approval-ready implementation plan without modifying code or configuration
+
+
+## Current task: split-provider XAU/XAG design
+
+- [x] Confirm Twelve Data remains authoritative for XAU/USD and EODHD is evaluated only for XAG/USD confirmation
+- [x] Define cross-provider timestamp alignment, symbol verification, and freshness rules
+- [x] Define quota isolation and fail-closed behavior when either provider is unavailable
+- [x] Define Monitoring fields that identify provider-specific status without changing v5 decision ownership
+- [x] Deliver the split-provider approval checklist without modifying code or secrets
+
+
+## Current task: BTC/USD video strategy extraction
+
+- [ ] Inventory the uploaded BTC/USD video archive without executing embedded artifacts
+- [ ] Analyze every BTC/USD video and preserve its stated rules and evidence
+- [ ] Reconcile shared rules, contradictions, optional modes, and undefined definitions
+- [ ] Identify clarification questions required for a deterministic BTC/USD strategy
+- [ ] Produce a consolidated BTC/USD v5 channel strategy without changing application code
+
+
+## Current task: approved BTC/USD video strategy specification
+
+- [x] Normalize the user-approved BTC/USD timeframe, entry, Fib, management, target, news, and risk rules
+- [x] Write the complete BTC/USD signal-generation workflow from context through Telegram eligibility
+- [x] Define mandatory gates, optional confluence, WAIT conditions, and paper-trade management boundaries
+- [x] Preserve the approved strategy as a specification without changing application code
+
+
+## Current task: revised BTC/USD signal-frequency rule
+
+- [x] Remove the 2% daily-loss cap and three-trades-per-day cap from the written BTC/USD strategy specification
+- [x] State that any number of independently qualifying BTC/USD signals may be emitted
+- [x] Preserve 0.5% per-trade risk, open-trade state rules, duplicate suppression, contradiction handling, data validity, and Telegram safety boundaries
+- [x] Deliver the revised specification without changing application code
+
+
+## Current task: BTC/USD Twelve Data readiness review
+
+- [x] Map every locked BTC/USD strategy input to required market data or application computation
+- [x] Verify Twelve Data coverage for BTC/USD 1W, 1D, 4H, 1H, and 15M candles and quotes
+- [x] Verify account-plan, quota, timestamp, and freshness constraints for the required BTC/USD requests
+- [x] Separate Twelve Data inputs from strategy computations and news/event dependencies
+- [x] Deliver the data-readiness conclusion without changing code, secrets, or provider configuration
+
+
+## Current task: EUR/USD video strategy extraction
+
+- [ ] Inventory the uploaded EUR/USD video archive without executing embedded artifacts
+- [ ] Analyze every EUR/USD video and preserve its stated rules and evidence
+- [ ] Reconcile shared rules, contradictions, optional modes, and undefined definitions
+- [ ] Identify clarification questions required for a deterministic EUR/USD strategy
+- [ ] Produce a consolidated EUR/USD v5 channel strategy without changing application code
+
+
+## Current task: approved EUR/USD video strategy specification
+
+- [x] Resolve the attached risk-control conflict in favor of the user’s explicit no-daily-cap instruction
+- [x] Normalize the approved EUR/USD timeframe, mandatory engine, optional confluence, entry, stop, target, news, and scaling rules
+- [x] Write the complete EUR/USD signal-generation workflow and WAIT conditions
+- [x] Preserve the approved strategy as a specification without changing application code
+
+
+## Current task: remove account-based risk sizing from asset strategies
+
+- [x] Remove account-balance-dependent 0.5–1% risk-sizing language from BTC/USD, EUR/USD, and XAU/USD specifications
+- [x] State that paper signals do not require account equity or position-size calculation
+- [x] Preserve each strategy’s structural stop-loss, target-selection, minimum RR, and signal-qualification rules
+- [x] Deliver the revised specifications without changing application code
+
+
+## Current task: GBP/USD video strategy extraction
+
+- [ ] Inventory the uploaded GBP/USD video archive without executing embedded artifacts
+- [ ] Analyze every GBP/USD video and preserve its stated rules and evidence
+- [ ] Reconcile shared rules, contradictions, optional modes, and undefined definitions
+- [ ] Identify clarification questions required for a deterministic GBP/USD strategy
+- [ ] Produce a consolidated GBP/USD v5 channel strategy without changing application code
+
+
+## Current task: approved GBP/USD video strategy specification
+
+- [ ] Normalize the approved GBP/USD timeframe, London-range, bias, entry-engine, BOS, confluence, target, stop, management, news, and scaling rules
+- [ ] Remove account-balance-dependent sizing and daily trade-count/loss caps from paper-signal qualification
+- [ ] Write the complete GBP/USD signal-generation workflow and WAIT conditions
+- [ ] Preserve the approved strategy as a specification without changing application code
+
+
+## Current task: finalized GBP/USD RR and news rule
+
+- [x] Set hard minimum final RR to 1:2, with 1:3 preferred but never forced
+- [x] Add the exact 15-minute pre/post high-impact-news block and abnormal-spread/ATR extension logic
+- [x] Define the two-consecutive-5M-candle normalization rule and 30-minute maximum extension
+- [x] Preserve full re-qualification when abnormal conditions persist beyond the extension
+- [x] Deliver the finalized GBP/USD specification without changing application code
+
+
+## Current task: future news-event signal path planning
+
+- [x] Define provider-backed event detection and one-day/one-hour Telegram reminders without blocking ordinary channel signals
+- [x] Define clearly labeled NEWS WARNING, provisional directional warning, and NEWS-EVENT SIGNAL messages
+- [x] Define post-release confirmation: actual/forecast/surprise, liquidity sweep, displacement, 5M BOS/CHoCH, retracement, and POI
+- [x] Keep NEWS-EVENT SIGNALs exempt from asset-specific strategy rules but subject to universal safety gates
+- [x] Preserve ordinary BTC/USD, EUR/USD, GBP/USD, and XAU/USD channel independence
+- [x] Add Monitoring and tracking requirements for the separate news-event path
+- [x] Do not change code, configuration, secrets, or Telegram behavior until explicitly authorized
+
+
+## Current task: exclude BTC/USD from news-event data
+
+- [x] Remove BTC/USD from the future news-event source and asset mapping
+- [x] Define BTC/USD as market-data and strategy-only, with no news warnings or NEWS-EVENT SIGNALs
+- [x] Ensure BTC/USD ordinary signals are not blocked, influenced, or supplemented by news state
+- [x] Preserve news-event planning only for the approved non-BTC asset paths
+- [x] Do not change code, configuration, secrets, or Telegram behavior until explicitly authorized
+
+
+## Current task: v7 direct-replacement preflight
+
+- [ ] Reconcile the two attached clarification tables with the locked v7 strategy documents
+- [ ] Preserve the latest explicit decisions: direct replacement, Render-managed provider keys, no ordinary news blocking, and no BTC news path
+- [ ] Resolve XAU session-window and stop-buffer conflicts
+- [ ] Resolve common swing, sweep, displacement, POI freshness, and POI-priority conflicts
+- [ ] Resolve EUR/GBP ordinary-news wording conflicts in favor of the approved separate event path
+- [ ] Define direct-replacement preflight probes, rollback readiness, and provider-data gates
+- [ ] Do not change code, secrets, configuration, database behavior, or Telegram behavior until remaining decisions are confirmed
+
+
+## Current task: suspend prior v7 specifications
+
+- [ ] Treat all previously supplied BTC/USD, EUR/USD, GBP/USD, XAU/USD, unified, and video-derived specification documents as non-authoritative
+- [ ] Do not use prior thresholds, sessions, buffers, POI rankings, news rules, or workflow assumptions for implementation
+- [ ] Preserve the no-code, no-secret-change, no-configuration-change, and no-live-behavior boundary
+- [ ] Receive and analyze the user’s new authoritative specification when provided
+- [ ] Request explicit approval of the new specification before implementation
+
+
+## Current task: v7 decision set pending authoritative specification
+
+- [x] Record direct replacement as the intended rollout method
+- [x] Record Render-managed provider credentials
+- [x] Record Telegram event behavior as confirmed
+- [x] Record universal safety boundaries as confirmed
+- [ ] Receive the new authoritative strategy specification for XAU/USD, BTC/USD, EUR/USD, GBP/USD, and shared mechanical definitions
+- [ ] Reconcile items 2–5 only against the new authoritative specification
+- [ ] Do not change code, secrets, configuration, database behavior, or live Telegram behavior until the new specification is reviewed and implementation is explicitly authorized
+
+
+## Current task: authoritative ANSWERS.docx reconciliation
+
+- [ ] Extract all decisions from ANSWERS.docx without importing retired strategy assumptions
+- [ ] Reconcile the authoritative answers with direct replacement, Render credentials, Telegram behavior, and safety boundaries
+- [ ] Identify any remaining contradictions or missing provider/mechanical values
+- [ ] Define the direct-replacement preflight checklist and rollback/verification gates
+- [ ] Do not change code, secrets, configuration, database behavior, or live Telegram behavior during this review
+
+
+## Current task: final v7 direct-replacement decisions
+
+- [x] Set BTC/USD session window to 08:00–17:00
+- [x] Keep ordinary channel signals unblocked by news; use separate warnings and NEWS-EVENT SIGNALs
+- [x] Apply the common mechanical swing, sweep, and POI definitions to EUR/USD and GBP/USD
+- [x] Retain each asset channel’s own displacement standard
+- [x] Prepare the direct-replacement implementation checklist with provider probes, safety gates, and rollback checks
+- [x] Do not change code, secrets, configuration, database behavior, or live Telegram behavior until explicit implementation authorization
