@@ -1612,7 +1612,7 @@
 - [x] Analyze each video and extract the source-defined XAU/USD trading rules
 - [x] Separate mandatory rules, optional guidance, and unresolved subjective definitions
 - [x] Produce a mechanical XAU/USD v5 channel specification that replaces the old strategy conceptually
-- [ ] Do not modify code until the user explicitly approves the proposed specification
+- [x] Do not modify code until the user explicitly approves the proposed specification
 
 
 ## Current task: XAU/USD dependency-readiness design
@@ -1636,11 +1636,11 @@
 
 ## Current task: BTC/USD video strategy extraction
 
-- [ ] Inventory the uploaded BTC/USD video archive without executing embedded artifacts
-- [ ] Analyze every BTC/USD video and preserve its stated rules and evidence
-- [ ] Reconcile shared rules, contradictions, optional modes, and undefined definitions
-- [ ] Identify clarification questions required for a deterministic BTC/USD strategy
-- [ ] Produce a consolidated BTC/USD v5 channel strategy without changing application code
+- [x] Inventory the uploaded BTC/USD video archive without executing embedded artifacts
+- [x] Analyze every BTC/USD video and preserve its stated rules and evidence
+- [x] Reconcile shared rules, contradictions, optional modes, and undefined definitions
+- [x] Identify clarification questions required for a deterministic BTC/USD strategy
+- [x] Produce a consolidated BTC/USD v5 channel strategy without changing application code
 
 
 ## Current task: approved BTC/USD video strategy specification
@@ -1670,11 +1670,11 @@
 
 ## Current task: EUR/USD video strategy extraction
 
-- [ ] Inventory the uploaded EUR/USD video archive without executing embedded artifacts
-- [ ] Analyze every EUR/USD video and preserve its stated rules and evidence
-- [ ] Reconcile shared rules, contradictions, optional modes, and undefined definitions
-- [ ] Identify clarification questions required for a deterministic EUR/USD strategy
-- [ ] Produce a consolidated EUR/USD v5 channel strategy without changing application code
+- [x] Inventory the uploaded EUR/USD video archive without executing embedded artifacts
+- [x] Analyze every EUR/USD video and preserve its stated rules and evidence
+- [x] Reconcile shared rules, contradictions, optional modes, and undefined definitions
+- [x] Identify clarification questions required for a deterministic EUR/USD strategy
+- [x] Produce a consolidated EUR/USD v5 channel strategy without changing application code
 
 
 ## Current task: approved EUR/USD video strategy specification
@@ -1695,19 +1695,19 @@
 
 ## Current task: GBP/USD video strategy extraction
 
-- [ ] Inventory the uploaded GBP/USD video archive without executing embedded artifacts
-- [ ] Analyze every GBP/USD video and preserve its stated rules and evidence
-- [ ] Reconcile shared rules, contradictions, optional modes, and undefined definitions
-- [ ] Identify clarification questions required for a deterministic GBP/USD strategy
-- [ ] Produce a consolidated GBP/USD v5 channel strategy without changing application code
+- [x] Inventory the uploaded GBP/USD video archive without executing embedded artifacts
+- [x] Analyze every GBP/USD video and preserve its stated rules and evidence
+- [x] Reconcile shared rules, contradictions, optional modes, and undefined definitions
+- [x] Identify clarification questions required for a deterministic GBP/USD strategy
+- [x] Produce a consolidated GBP/USD v5 channel strategy without changing application code
 
 
 ## Current task: approved GBP/USD video strategy specification
 
-- [ ] Normalize the approved GBP/USD timeframe, London-range, bias, entry-engine, BOS, confluence, target, stop, management, news, and scaling rules
-- [ ] Remove account-balance-dependent sizing and daily trade-count/loss caps from paper-signal qualification
-- [ ] Write the complete GBP/USD signal-generation workflow and WAIT conditions
-- [ ] Preserve the approved strategy as a specification without changing application code
+- [x] Normalize the approved GBP/USD timeframe, London-range, bias, entry-engine, BOS, confluence, target, stop, management, news, and scaling rules
+- [x] Remove account-balance-dependent sizing and daily trade-count/loss caps from paper-signal qualification
+- [x] Write the complete GBP/USD signal-generation workflow and WAIT conditions
+- [x] Preserve the approved strategy as a specification without changing application code
 
 
 ## Current task: finalized GBP/USD RR and news rule
@@ -1741,22 +1741,22 @@
 
 ## Current task: v7 direct-replacement preflight
 
-- [ ] Reconcile the two attached clarification tables with the locked v7 strategy documents
-- [ ] Preserve the latest explicit decisions: direct replacement, Render-managed provider keys, no ordinary news blocking, and no BTC news path
-- [ ] Resolve XAU session-window and stop-buffer conflicts
-- [ ] Resolve common swing, sweep, displacement, POI freshness, and POI-priority conflicts
-- [ ] Resolve EUR/GBP ordinary-news wording conflicts in favor of the approved separate event path
-- [ ] Define direct-replacement preflight probes, rollback readiness, and provider-data gates
-- [ ] Do not change code, secrets, configuration, database behavior, or Telegram behavior until remaining decisions are confirmed
+- [x] Reconcile the two attached clarification tables with the locked v7 strategy documents
+- [x] Preserve the latest explicit decisions: direct replacement, Render-managed provider keys, no ordinary news blocking, and no BTC news path
+- [x] Resolve XAU session-window and stop-buffer conflicts
+- [x] Resolve common swing, sweep, displacement, POI freshness, and POI-priority conflicts
+- [x] Resolve EUR/GBP ordinary-news wording conflicts in favor of the approved separate event path
+- [x] Define direct-replacement preflight probes, rollback readiness, and provider-data gates
+- [x] Do not change code, secrets, configuration, database behavior, or Telegram behavior until remaining decisions are confirmed
 
 
 ## Current task: suspend prior v7 specifications
 
-- [ ] Treat all previously supplied BTC/USD, EUR/USD, GBP/USD, XAU/USD, unified, and video-derived specification documents as non-authoritative
-- [ ] Do not use prior thresholds, sessions, buffers, POI rankings, news rules, or workflow assumptions for implementation
-- [ ] Preserve the no-code, no-secret-change, no-configuration-change, and no-live-behavior boundary
-- [ ] Receive and analyze the user’s new authoritative specification when provided
-- [ ] Request explicit approval of the new specification before implementation
+- [x] Treat all previously supplied BTC/USD, EUR/USD, GBP/USD, XAU/USD, unified, and video-derived specification documents as non-authoritative
+- [x] Do not use prior thresholds, sessions, buffers, POI rankings, news rules, or workflow assumptions for implementation
+- [x] Preserve the no-code, no-secret-change, no-configuration-change, and no-live-behavior boundary
+- [x] Receive and analyze the user’s new authoritative specification when provided
+- [x] Request explicit approval of the new specification before implementation
 
 
 ## Current task: v7 decision set pending authoritative specification
@@ -1765,18 +1765,18 @@
 - [x] Record Render-managed provider credentials
 - [x] Record Telegram event behavior as confirmed
 - [x] Record universal safety boundaries as confirmed
-- [ ] Receive the new authoritative strategy specification for XAU/USD, BTC/USD, EUR/USD, GBP/USD, and shared mechanical definitions
-- [ ] Reconcile items 2–5 only against the new authoritative specification
-- [ ] Do not change code, secrets, configuration, database behavior, or live Telegram behavior until the new specification is reviewed and implementation is explicitly authorized
+- [x] Receive the new authoritative strategy specification for XAU/USD, BTC/USD, EUR/USD, GBP/USD, and shared mechanical definitions
+- [x] Reconcile items 2–5 only against the new authoritative specification
+- [x] Do not change code, secrets, configuration, database behavior, or live Telegram behavior until the new specification is reviewed and implementation is explicitly authorized
 
 
 ## Current task: authoritative ANSWERS.docx reconciliation
 
-- [ ] Extract all decisions from ANSWERS.docx without importing retired strategy assumptions
-- [ ] Reconcile the authoritative answers with direct replacement, Render credentials, Telegram behavior, and safety boundaries
-- [ ] Identify any remaining contradictions or missing provider/mechanical values
-- [ ] Define the direct-replacement preflight checklist and rollback/verification gates
-- [ ] Do not change code, secrets, configuration, database behavior, or live Telegram behavior during this review
+- [x] Extract all decisions from ANSWERS.docx without importing retired strategy assumptions
+- [x] Reconcile the authoritative answers with direct replacement, Render credentials, Telegram behavior, and safety boundaries
+- [x] Identify any remaining contradictions or missing provider/mechanical values
+- [x] Define the direct-replacement preflight checklist and rollback/verification gates
+- [x] Do not change code, secrets, configuration, database behavior, or live Telegram behavior during this review
 
 
 ## Current task: final v7 direct-replacement decisions
