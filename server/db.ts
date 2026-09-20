@@ -296,8 +296,12 @@ export async function hasOpenGeneratedSignal(userId: number, asset: string, time
   const db = await getDb();
   if (!db) return false;
   const filters = [eq(generatedSignals.userId, userId), eq(generatedSignals.asset, asset), eq(generatedSignals.timeframe, timeframe), eq(generatedSignals.status, "PENDING")];
-  if (intelligenceVersion) filters.push(eq(generatedSignals.intelligenceVersion, intelligenceVersion));
-  if (generationMode) filters.push(eq(generatedSignals.generationMode, generationMode));
+  const identity = intelligenceVersion && generationMode
+    ? or(and(eq(generatedSignals.intelligenceVersion, intelligenceVersion), eq(generatedSignals.generationMode, generationMode)), and(eq(generatedSignals.intelligenceVersion, "v7-intelligence"), eq(generatedSignals.generationMode, "V7_INTELLIGENCE")))
+    : undefined;
+  if (identity) filters.push(identity);
+  else if (intelligenceVersion) filters.push(eq(generatedSignals.intelligenceVersion, intelligenceVersion));
+  else if (generationMode) filters.push(eq(generatedSignals.generationMode, generationMode));
   const rows = await db.select({ id: generatedSignals.id }).from(generatedSignals).where(and(...filters)).limit(1);
   return rows.length > 0;
 }
@@ -407,7 +411,10 @@ export async function listPaperTradeAdjustments(userId: number, limit = 100) {
 export async function listOpenCurrentV5Signals(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(generatedSignals).where(and(eq(generatedSignals.userId, userId), eq(generatedSignals.status, "PENDING"), eq(generatedSignals.intelligenceVersion, "forex-trading-combined-document-v5"), eq(generatedSignals.generationMode, ENTRY_LOCATOR_V5_GENERATION_MODE))).orderBy(desc(generatedSignals.openedAt));
+  return db.select().from(generatedSignals).where(and(eq(generatedSignals.userId, userId), eq(generatedSignals.status, "PENDING"), or(
+    and(eq(generatedSignals.intelligenceVersion, "forex-trading-combined-document-v5"), eq(generatedSignals.generationMode, ENTRY_LOCATOR_V5_GENERATION_MODE)),
+    and(eq(generatedSignals.intelligenceVersion, "v7-intelligence"), eq(generatedSignals.generationMode, "V7_INTELLIGENCE")),
+  ))).orderBy(desc(generatedSignals.openedAt));
 }
 
 export async function hasExactGeneratedSignal(input: { userId: number; asset: string; timeframe: string; direction: "BUY" | "SELL"; entry: string | number; stopLoss: string | number; takeProfit: string | number; riskReward: string | number; confidence: string | number; confluenceScore: string | number; intelligenceVersion: string; generationMode: string }) {
@@ -482,7 +489,7 @@ export async function listResolvedSignalsMissingOutcomeDelivery(userId: number, 
     .leftJoin(telegramDeliveries, and(eq(telegramDeliveries.signalId, generatedSignals.id), eq(telegramDeliveries.kind, "OUTCOME")))
     .where(and(
       eq(generatedSignals.userId, userId),
-      eq(generatedSignals.intelligenceVersion, "forex-trading-combined-document-v5"),
+      inArray(generatedSignals.intelligenceVersion, ["forex-trading-combined-document-v5", "v7-intelligence"]),
       inArray(generatedSignals.status, ["WIN", "LOSS"]),
       isNull(telegramDeliveries.id),
       or(isNull(generatedSignals.outcomeNote), not(sql`${generatedSignals.outcomeNote} like 'Manual outcome override confirmed by user:%'`)),

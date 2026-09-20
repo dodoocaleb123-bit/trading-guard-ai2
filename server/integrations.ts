@@ -16,6 +16,10 @@ export type MarketSnapshot = {
   close?: number;
   change?: number;
   fetchedAt: string;
+  providerTimestamp?: string | null;
+  bid?: number | null;
+  ask?: number | null;
+  spread?: number | null;
   interval?: "5min" | "15min" | "1h" | "4h";
   trend?: "UP" | "DOWN";
   values?: Array<Record<string, unknown>>;
@@ -204,6 +208,9 @@ export async function fetchMarketSnapshot(asset: string, interval = "15min") {
   const quote = response.data;
   const price = Number(quote.close ?? quote.price ?? quote.previous_close);
   if (!Number.isFinite(price)) throw new Error("Market provider returned no usable price");
+  const bid = Number.isFinite(Number(quote.bid)) ? Number(quote.bid) : null;
+  const ask = Number.isFinite(Number(quote.ask)) ? Number(quote.ask) : null;
+  const spread = bid != null && ask != null && ask > bid ? Number((ask - bid).toFixed(8)) : null;
   return {
     symbol,
     price,
@@ -213,6 +220,10 @@ export async function fetchMarketSnapshot(asset: string, interval = "15min") {
     close: Number(quote.close),
     change: Number(quote.percent_change),
     fetchedAt: new Date().toISOString(),
+    providerTimestamp: Number.isFinite(Number(quote.timestamp)) ? new Date(Number(quote.timestamp) * 1000).toISOString() : (typeof quote.datetime === "string" ? quote.datetime : null),
+    bid,
+    ask,
+    spread,
   } satisfies MarketSnapshot;
 }
 
@@ -331,12 +342,12 @@ export function formatDetailedApprovedTelegramMessage(input: {
   return lines.join("\n");
 }
 
-export function formatApprovedTelegramMessage(input: { asset: string; timeframe: string; direction: string; entry: number | null | undefined; stopLoss: number | null | undefined; takeProfit: number | null | undefined; confidence: number; riskReward?: number | null; adjustments?: string; ruleEvidence?: string[]; fundamentalContext?: FundamentalContext; confluenceScore?: number; decisionTrace?: IntelligenceDecisionTrace; generationSource?: "ENTRY_LOCATOR" }) {
+export function formatApprovedTelegramMessage(input: { asset: string; timeframe: string; direction: string; entry: number | null | undefined; stopLoss: number | null | undefined; takeProfit: number | null | undefined; confidence: number; riskReward?: number | null; adjustments?: string; ruleEvidence?: string[]; fundamentalContext?: FundamentalContext; confluenceScore?: number; decisionTrace?: IntelligenceDecisionTrace; generationSource?: "ENTRY_LOCATOR" | "V7_CHANNEL" | "NEWS_EVENT" }) {
   const optional = (value: number | null | undefined) => value == null ? "—" : String(value);
   const trace = input.decisionTrace;
   const confluence = trace?.scoreSummary.confluenceScore ?? input.confluenceScore;
   const score = trace ? `Score: BUY ${trace.scoreSummary.buyScore} vs SELL ${trace.scoreSummary.sellScore}` : "Score: unavailable";
-  const sourceLabel = "HIERARCHICAL WORKFLOW · ENTRY LOCATOR";
+  const sourceLabel = input.generationSource === "V7_CHANNEL" ? "V7 INTELLIGENCE · CHANNEL SIGNAL" : input.generationSource === "NEWS_EVENT" ? "V7 INTELLIGENCE · NEWS-EVENT SIGNAL" : "HIERARCHICAL WORKFLOW · ENTRY LOCATOR";
   return [
     input.direction,
     `${input.asset} · ${input.timeframe}`,
@@ -848,5 +859,3 @@ export async function forensicAnalysis(signal: { asset: string; direction: strin
   const content = response.choices?.[0]?.message?.content;
     return normalizeForensicFinding(parseStructuredContent(content));
 }
-
-
