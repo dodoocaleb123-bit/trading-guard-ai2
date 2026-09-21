@@ -126,11 +126,13 @@ async function startServer() {
   });
   app.post("/api/external/trading-guard-scanner", async (req, res) => {
     if (!isExternalScannerTriggerAuthorized(req.headers["x-scanner-trigger-secret"], ENV.externalScannerTriggerSecret)) return res.status(403).json({ error: "external-trigger-only" });
-    try {
-      return res.json(await executeScannerRun(EXTERNAL_SCANNER_TASK_UID, "External trigger"));
-    } catch (error) {
-      return res.status(500).json({ error: error instanceof Error ? error.message : "scanner failed", timestamp: new Date().toISOString() });
-    }
+    // cron-job.org allows at most 30 seconds. Market ingestion and the four
+    // v7 channels can legitimately take longer, so acknowledge the authorized
+    // callback immediately and let the existing run ledger record completion.
+    void executeScannerRun(EXTERNAL_SCANNER_TASK_UID, "External trigger").catch((error) => {
+      console.error("[Scanner] Asynchronous external trigger failed:", error);
+    });
+    return res.status(202).json({ ok: true, accepted: true, source: "External trigger", message: "Scanner run accepted; completion is recorded in Monitoring." });
   });
   // tRPC API
   app.use(
