@@ -17,8 +17,8 @@ describe("dashboard terminology", () => {
     expect(homeSource).toContain("strategy-engine judgments");
   });
 
-  it("exposes the v5 Locator source controls and provenance labels", () => {
-    expect(homeSource).toContain("V5 source performance");
+  it("exposes the v7 Locator source controls and provenance labels", () => {
+    expect(homeSource).toContain("v7 source performance");
     expect(homeSource).toContain("Filter source performance by asset");
     expect(homeSource).toContain("Filter source performance by timeframe");
     expect(homeSource).toContain("Entry Locator");
@@ -72,15 +72,15 @@ describe("dashboard terminology", () => {
     expect(homeSource).toContain("Latest affected interval");
     expect(homeSource).toContain("detected");
     expect(homeSource).toContain("latestProviderIssue.at");
-    expect(homeSource).toContain("no v5 Entry Locator signal");
+    expect(homeSource).toContain("no v7 Entry Locator signal");
   });
 
   it("exposes the compact production health timeline", () => {
     expect(homeSource).toContain("Production health timeline");
     expect(homeSource).toContain("Data · {hasMarketData ? \"available\" : run.marketData === \"unavailable\" ? \"unavailable\" : \"not run\"}");
-    expect(homeSource).toContain("v5 · {qualified ? `${run.createdSignals} qualified` : \"waiting\"}");
+    expect(homeSource).toContain("v7 · {qualified ? `${run.createdSignals} qualified` : \"waiting\"}");
     expect(homeSource).toContain("Telegram · {qualified ? \"path started\" : \"not attempted\"}");
-    expect(homeSource).toContain("Telegram is only attempted after v5 qualifies");
+    expect(homeSource).toContain("Telegram is only attempted after v7 qualifies");
   });
 
   it("mounts the compact production timeline on the Scanner page and callback health on Monitoring", () => {
@@ -118,18 +118,18 @@ describe("dashboard terminology", () => {
     expect(homeSource).not.toContain("EntryForgerCard");
   });
 
-  it("exposes the v5 zone map, history freshness, and qualification trend", () => {
-    expect(homeSource).toContain("V5 persistent zone inventory");
+  it("exposes the v7 zone map, history freshness, and qualification trend", () => {
+    expect(homeSource).toContain("v7 persistent zone inventory");
     expect(homeSource).toContain("Each asset has its own durable zone map");
     expect(homeSource).toContain("observationCount");
     expect(homeSource).toContain("retestCount");
     expect(homeSource).toContain("FRESH ·");
     expect(homeSource).toContain("AGING ·");
     expect(homeSource).toContain("STALE ·");
-    expect(homeSource).toContain("Authenticated v5 production smoke");
+    expect(homeSource).toContain("Authenticated v7 production smoke");
     expect(homeSource).toContain("trpc.scanner.v5Smoke.useQuery");
-    expect(homeSource).toContain("V5 qualification trend · last 24 hours");
-    expect(homeSource).toContain("V5 qualified and waiting decisions by hour");
+    expect(homeSource).toContain("v7 qualification trend · last 24 hours");
+    expect(homeSource).toContain("v7 qualified and waiting decisions by hour");
     expect(homeSource).toContain("4H, 1H, 15M, and 5M");
   });
 
@@ -137,15 +137,15 @@ describe("dashboard terminology", () => {
     expect(homeSource).toContain("const providerIssue = cadence.data?.latestProviderIssue");
     expect(homeSource).toContain("const providerOutageActive = Boolean(");
     expect(homeSource).toContain("Twelve Data quota or rate-limit warning");
-    expect(homeSource).toContain("No new v5 signal is emitted from an incomplete cycle.");
+    expect(homeSource).toContain("No new v7 signal is emitted from an incomplete cycle.");
     expect(homeSource).toContain("Check the configured Twelve Data failover keys");
   });
 
-  it("exposes the latest scanner attempt separately from the last persisted v5 state", () => {
+  it("exposes the latest scanner attempt separately from the last persisted v7 state", () => {
     expect(homeSource).toContain("const latestScannerAttempt = cadence.data?.lastRunAt");
     expect(homeSource).toContain("Latest scanner cycle:");
-    expect(homeSource).toContain("Last v5 state update");
-    expect(homeSource).toContain("did not write a new v5 snapshot");
+    expect(homeSource).toContain("Last v7 state update");
+    expect(homeSource).toContain("did not write a new v7 snapshot");
     expect(homeSource).toContain("provider data was unavailable.");
   });
 
@@ -159,7 +159,7 @@ describe("dashboard terminology", () => {
   it("exposes the signal delivery status and orphan-state warnings", () => {
     expect(homeSource).toContain("Telegram delivery");
     expect(homeSource).toContain("ORPHANED STATE");
-    expect(homeSource).toContain("No matching unresolved v5 signal exists; this state is not an active trade lock.");
+    expect(homeSource).toContain("No matching unresolved v7 signal exists; this state is not an active trade lock.");
     expect(homeSource).toContain("Signal exists, but no Telegram delivery record is available.");
     expect(homeSource).toContain("Delivered ${formatDateTime");
   });

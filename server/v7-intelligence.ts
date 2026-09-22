@@ -4,6 +4,7 @@ import type { WorkflowZone } from "./multitimeframe-workflow";
 
 export const V7_INTELLIGENCE_VERSION = "v7-intelligence" as const;
 export const V7_GENERATION_MODE = "V7_INTELLIGENCE" as const;
+export const V7_NEWS_EVENT_GENERATION_MODE = "V7_NEWS_EVENT" as const;
 export const V7_SIGNAL_TIMEFRAMES = ["15MIN", "5MIN"] as const;
 export const V7_HIERARCHY = ["1W", "1D", "4H", "1H", "15M"] as const;
 export const V7_SESSION = { startHourUtc: 8, endHourUtc: 17 } as const;

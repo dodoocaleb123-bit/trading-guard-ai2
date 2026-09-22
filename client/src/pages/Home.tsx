@@ -258,7 +258,7 @@ function ReplacementStatsCard() {
     <Card className="mt-6">
       <CardHeader>
         <CardTitle className="font-display text-xl">
-          Hierarchical workflow paper validation
+          V7 channel workflow paper validation
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           Hierarchical-workflow outcome performance, confidence calibration, and source-linked
@@ -439,7 +439,7 @@ function V5MonitoringCard() {
                 ))
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  No v5 signals recorded yet.
+                  No v7 signals recorded yet.
                 </p>
               )}
             </div>
@@ -766,12 +766,12 @@ function EntryLocatorCard() {
     <Card className="mt-6">
       <CardHeader>
         <CardTitle className="font-display text-xl">
-          V5 hierarchy execution states
+          v7 hierarchy execution states
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          V5 evaluates each scanner snapshot through 4H bias → 1H context →
+          v7 evaluates each scanner snapshot through 4H bias → 1H context →
           independent 15M and 5M execution. Entry Locator is the final
-          execution-readiness gate; these states show whether v5 has a
+          execution-readiness gate; these states show whether v7 has a
           qualified plan ready to emit.
         </p>
         {latestScannerAttempt ? (
@@ -805,7 +805,7 @@ function EntryLocatorCard() {
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <p className="text-muted-foreground">{state.timeframe === "1H" || state.timeframe === "4H" ? "V5 context refreshes" : "V5 snapshots evaluated"}</p>
+                    <p className="text-muted-foreground">{state.timeframe === "1H" || state.timeframe === "4H" ? "v7 context refreshes" : "v7 snapshots evaluated"}</p>
                     <p className="mt-1 font-semibold">{state.snapshotCount}</p>
                   </div>
                   <div>
@@ -833,7 +833,7 @@ function EntryLocatorCard() {
                 </div>
                 <p className="mt-3 text-xs leading-5 text-muted-foreground">
                   {state.timeframe === "1H" || state.timeframe === "4H"
-                    ? `${state.timeframe} context refreshed for the v5 hierarchy; this timeframe is not eligible for signal emission.`
+                    ? `${state.timeframe} context refreshed for the v7 hierarchy; this timeframe is not eligible for signal emission.`
                     : state.stateJson
                     ? (() => {
                         try {
@@ -867,7 +867,7 @@ function EntryLocatorCard() {
                 </div>
                 {state.orphanedEmission ? (
                   <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] leading-4 text-amber-800">
-                    No matching unresolved v5 signal exists; this state is not an active trade lock.
+                    No matching unresolved v7 signal exists; this state is not an active trade lock.
                   </p>
                 ) : state.telegramDelivery ? (
                   <p className="mt-2 text-[11px] text-muted-foreground">
@@ -881,11 +881,11 @@ function EntryLocatorCard() {
                   </p>
                 ) : null}
                 <p className="mt-2 text-[11px] text-muted-foreground">
-                  {state.timeframe === "1H" || state.timeframe === "4H" ? `Last ${state.timeframe} context refresh` : "Last v5 state update"} {formatDateTime(state.updatedAt)}
+                  {state.timeframe === "1H" || state.timeframe === "4H" ? `Last ${state.timeframe} context refresh` : "Last v7 state update"} {formatDateTime(state.updatedAt)}
                 </p>
                 {scannerAttemptIsNewer ? (
                   <p className="mt-1 text-[11px] leading-4 text-amber-700">
-                    Latest scanner cycle {formatDateTime(latestScannerAttempt)} did not write a new v5 snapshot
+                    Latest scanner cycle {formatDateTime(latestScannerAttempt)} did not write a new v7 snapshot
                     {cadence.data?.latestProviderIssue ? " because provider data was unavailable." : "."}
                   </p>
                 ) : null}
@@ -1115,13 +1115,13 @@ function ChatAudit({ assistant = "WHITE" }: { assistant?: "WHITE" | "CHERRY" } =
       ]
     : mode === "ASK"
       ? [
-          "Why did v5 send or withhold the latest XAU/USD signal?",
+          "Why did v7 send or withhold the latest XAU/USD signal?",
           "What are the current XAU/USD zones and scanner status?",
-          "Explain how v5 decides confidence, confluence, and geometry.",
+          "Explain how v7 decides confidence, confluence, and geometry.",
         ]
       : [
           "Audit the latest app-generated EUR/USD signal",
-          "Explain why this v5 plan was skipped",
+          "Explain why this v7 plan was skipped",
           "Audit XAU/USD SELL with 1:2 risk/reward",
         ];
   return (
@@ -1229,7 +1229,7 @@ function AdjustmentHistory() {
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
               Automatic contradiction replies linked to unresolved current Entry
-              Locator v5 signals.
+              Locator v7 signals.
             </p>
           </div>
           <Badge
@@ -1358,7 +1358,7 @@ function AdjustmentHistory() {
         ) : (
           <div className="p-8 text-center text-sm text-muted-foreground">
             No contradiction adjustments have been recorded. The monitor only
-            replies when a strong, opposing v5 direction is detected while a
+            replies when a strong, opposing v7 direction is detected while a
             signal is unresolved.
           </div>
         )}
@@ -1565,7 +1565,7 @@ function UpgradeChainHistory() {
           <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
             No stronger setup upgrades have been recorded yet. The monitor will
             show the first linked replacement after a materially better
-            qualified v5 thesis appears.
+            qualified v7 thesis appears.
           </div>
         )}
       </CardContent>
@@ -1594,10 +1594,10 @@ function V5SourcePerformanceCard() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <CardTitle className="font-display text-xl">
-              V5 source performance
+              v7 source performance
             </CardTitle>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Review v5 paper signals created by the Entry Locator after the
+              Review v7 paper signals created by the Entry Locator after the
               hierarchy and quality gates pass. Refreshes every minute.
             </p>
           </div>
@@ -1649,7 +1649,7 @@ function V5SourcePerformanceCard() {
                       "Entry Locator"
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      "V5 structural execution gate"
+                      "v7 structural execution gate"
                     </p>
                   </div>
                   <Badge
@@ -1709,7 +1709,7 @@ function V5SourcePerformanceCard() {
           !query.isError &&
           !visibleRows.some(row => row.generated > 0) && (
             <p className="mt-4 rounded-xl border border-dashed p-4 text-center text-xs text-muted-foreground">
-              No v5 signals match the selected source, asset, or timeframe yet.
+              No v7 signals match the selected source, asset, or timeframe yet.
               Empty results are shown as zero; no outcome is fabricated.
             </p>
           )}
@@ -1739,11 +1739,11 @@ function AdaptiveRatioPerformanceCard() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <CardTitle className="font-display text-xl">
-              V5 adaptive ratio performance
+              v7 adaptive ratio performance
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
-              Authoritative Entry Locator v5 paper outcomes grouped by selected
-              risk/reward ratio. Active v5 selection is limited to 1:3 and 1:2;
+              Authoritative Entry Locator v7 paper outcomes grouped by selected
+              risk/reward ratio. Active v7 selection is limited to 1:3 and 1:2;
               historical 1:1 and 1:1.5 records remain visible for audit.
               Refreshes every minute.
             </p>
@@ -2065,15 +2065,15 @@ function TradeHistory() {
                       <Badge
                         variant="outline"
                         className={
-                          s.generationMode === "ENTRY_LOCATOR_V5"
+                          s.generationMode === "V7_ENTRY_LOCATOR"
                             ? "border-primary/30 text-primary"
                             : "border-slate-400/40 text-slate-600"
                         }
                       >
-                        {s.generationMode === "ENTRY_LOCATOR_V5"
-                          ? "V5 · Entry Locator"
-                          : s.intelligenceVersion?.includes("v5")
-                            ? "V5 · Historical snapshot"
+                        {s.generationMode === "V7_ENTRY_LOCATOR"
+                          ? "v7 · Entry Locator"
+                          : s.intelligenceVersion?.includes("v7")
+                            ? "v7 · Historical snapshot"
                             : intelligenceVersionLabel(s.intelligenceVersion ?? "")}
                       </Badge>
                     </div>
@@ -2436,8 +2436,8 @@ function ScannerCadenceDiagnostics() {
                   .
                 </p>
                 <p className="mt-1 text-xs leading-5">
-                  This cycle could not supply market data, so v5 did not
-                  evaluate setups and no v5 Entry Locator signal
+                  This cycle could not supply market data, so v7 did not
+                  evaluate setups and no v7 Entry Locator signal
                   was created. Unavailable provider cycles in the last 24 hours:{" "}
                   {data.providerUnavailableCycles ?? 0}.{" "}
                   {data.latestProviderIssue.severity === "TRANSIENT"
@@ -2510,7 +2510,7 @@ function ScannerCadenceDiagnostics() {
               <div className="overflow-hidden rounded-xl border bg-background">
                 <div className="border-b bg-muted/25 px-3 py-2.5">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Production health timeline</p>
-                  <p className="mt-1 text-[11px] leading-4 text-muted-foreground">Recent scheduler cycles at a glance. Telegram is only attempted after v5 qualifies and the Entry Locator emits a signal.</p>
+                  <p className="mt-1 text-[11px] leading-4 text-muted-foreground">Recent scheduler cycles at a glance. Telegram is only attempted after v7 qualifies and the Entry Locator emits a signal.</p>
                 </div>
                 <div className="divide-y">
                   {data.runs.slice(0, 8).map(run => {
@@ -2527,7 +2527,7 @@ function ScannerCadenceDiagnostics() {
                           </div>
                           <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
                             <span className={`rounded-full border px-2 py-0.5 ${hasMarketData ? "border-emerald-500/25 bg-emerald-500/5 text-emerald-700" : "border-amber-500/25 bg-amber-500/5 text-amber-800"}`}>Data · {hasMarketData ? "available" : run.marketData === "unavailable" ? "unavailable" : "not run"}</span>
-                            <span className={`rounded-full border px-2 py-0.5 ${qualified ? "border-emerald-500/25 bg-emerald-500/5 text-emerald-700" : "border-slate-300 bg-slate-50 text-slate-700"}`}>v5 · {qualified ? `${run.createdSignals} qualified` : "waiting"}</span>
+                            <span className={`rounded-full border px-2 py-0.5 ${qualified ? "border-emerald-500/25 bg-emerald-500/5 text-emerald-700" : "border-slate-300 bg-slate-50 text-slate-700"}`}>v7 · {qualified ? `${run.createdSignals} qualified` : "waiting"}</span>
                             <span className={`rounded-full border px-2 py-0.5 ${qualified ? "border-blue-500/25 bg-blue-500/5 text-blue-700" : "border-slate-300 bg-slate-50 text-slate-700"}`}>Telegram · {qualified ? "path started" : "not attempted"}</span>
                           </div>
                         </div>
@@ -2549,7 +2549,7 @@ function ScannerCadenceDiagnostics() {
   );
 }
 
-function V5SmokeStatusCard() {
+function V7SmokeStatusCard() {
   const smoke = trpc.scanner.v5Smoke.useQuery(undefined, LIVE_QUERY_OPTIONS);
   const data = smoke.data;
   return (
@@ -2557,14 +2557,14 @@ function V5SmokeStatusCard() {
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <CardTitle className="font-display text-xl">Authenticated v5 production smoke</CardTitle>
+            <CardTitle className="font-display text-xl">Authenticated v7 production smoke</CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">Checks recent successful scanner cycles against complete persisted hierarchy payloads.</p>
           </div>
           <Badge className={data?.ok ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600" : "border-amber-500/20 bg-amber-500/10 text-amber-700"}>{data?.ok ? "PASS" : smoke.isLoading ? "CHECKING" : "WAITING"}</Badge>
         </div>
       </CardHeader>
       <CardContent>
-        {smoke.isError ? <DataError text="Authenticated v5 smoke status could not be loaded." /> : (
+        {smoke.isError ? <DataError text="Authenticated v7 smoke status could not be loaded." /> : (
           <>
             <div className="grid gap-3 text-xs text-muted-foreground sm:grid-cols-4">
             <span>Payloads checked: <b className="text-foreground">{data?.checkedDecisions ?? 0}</b></span>
@@ -2586,7 +2586,7 @@ function V5SmokeStatusCard() {
   );
 }
 
-function V5DecisionTrend() {
+function V7DecisionTrend() {
   const decisions = trpc.scanner.decisions.useQuery(undefined, LIVE_QUERY_OPTIONS);
   const buckets = useMemo(() => {
     const now = Date.now();
@@ -2616,18 +2616,18 @@ function V5DecisionTrend() {
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle className="font-display text-xl">V5 qualification trend · last 24 hours</CardTitle>
+        <CardTitle className="font-display text-xl">v7 qualification trend · last 24 hours</CardTitle>
         <p className="text-xs leading-5 text-muted-foreground">Counts only persisted hierarchy decisions. A quiet hour remains quiet; it is not treated as a failed or qualified cycle.</p>
       </CardHeader>
       <CardContent>
-        {decisions.isError ? <DataError text="The v5 qualification trend could not be loaded." /> : decisions.isLoading ? <p className="text-sm text-muted-foreground">Loading qualification history…</p> : (
+        {decisions.isError ? <DataError text="The v7 qualification trend could not be loaded." /> : decisions.isLoading ? <p className="text-sm text-muted-foreground">Loading qualification history…</p> : (
           <>
             <div className="mb-4 flex flex-wrap gap-4 text-xs text-muted-foreground">
               <span><b className="text-emerald-600">{qualified}</b> qualified</span>
               <span><b className="text-amber-600">{waiting}</b> waiting</span>
               <span>{qualified + waiting} decisions with hierarchy status</span>
             </div>
-            <div className="grid h-32 grid-cols-[repeat(24,minmax(0,1fr))] items-end gap-1" aria-label="V5 qualified and waiting decisions by hour">
+            <div className="grid h-32 grid-cols-[repeat(24,minmax(0,1fr))] items-end gap-1" aria-label="v7 qualified and waiting decisions by hour">
               {buckets.map((bucket, index) => (
                 <div key={`${bucket.label}-${index}`} className="flex h-full min-w-0 flex-col justify-end gap-1" title={`${bucket.label}: ${bucket.qualified} qualified, ${bucket.waiting} waiting`}>
                   <div className="flex min-h-0 flex-1 flex-col justify-end gap-px">
@@ -2646,7 +2646,7 @@ function V5DecisionTrend() {
   );
 }
 
-function V5ZoneMap() {
+function V7ZoneMap() {
   const decisions = trpc.scanner.decisions.useQuery(undefined, LIVE_QUERY_OPTIONS);
   const zoneHistory = trpc.scanner.zoneHistory.useQuery(undefined, LIVE_QUERY_OPTIONS);
   const latestByAsset = useMemo(() => {
@@ -2666,11 +2666,11 @@ function V5ZoneMap() {
   return (
     <Card className="mb-6 border-primary/15 bg-primary/[0.025]">
       <CardHeader>
-        <CardTitle className="font-display text-xl">V5 persistent zone inventory</CardTitle>
+        <CardTitle className="font-display text-xl">v7 persistent zone inventory</CardTitle>
         <p className="text-xs leading-5 text-muted-foreground">Each asset has its own durable zone map across 4H, 1H, 15M, and 5M. Active and weakened records remain visible with observation and retest counts; invalidated records are retained in the database but excluded from current evidence.</p>
       </CardHeader>
       <CardContent>
-        {decisions.isError || zoneHistory.isError ? <DataError text="The v5 zone inventory could not be loaded. Refresh after the scanner records recover." /> : decisions.isLoading || zoneHistory.isLoading ? <p className="text-sm text-muted-foreground">Loading persistent zone inventory…</p> : (
+        {decisions.isError || zoneHistory.isError ? <DataError text="The v7 zone inventory could not be loaded. Refresh after the scanner records recover." /> : decisions.isLoading || zoneHistory.isLoading ? <p className="text-sm text-muted-foreground">Loading persistent zone inventory…</p> : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {WATCHLIST.map(item => {
               const assetZones = (zoneHistory.data ?? []).filter((zone: any) => zone.asset === item.symbol);
@@ -2729,7 +2729,7 @@ function ReplacementChainMonitoringCard() {
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <div className="rounded-xl border bg-background p-3 text-xs leading-5 text-muted-foreground">
             <p className="font-semibold uppercase tracking-[0.14em] text-foreground">Chain rule</p>
-            <p className="mt-1">A later opposite setup can reply to the previous replacement only after the original parent is closed and the candidate passes v5 hierarchy approval followed by Entry Locator gates.</p>
+            <p className="mt-1">A later opposite setup can reply to the previous replacement only after the original parent is closed and the candidate passes v7 hierarchy approval followed by Entry Locator gates.</p>
           </div>
           <div className="rounded-xl border bg-background p-3 text-xs leading-5 text-muted-foreground">
             <p className="font-semibold uppercase tracking-[0.14em] text-foreground">Exact identity</p>
@@ -2746,25 +2746,39 @@ function ReplacementChainMonitoringCard() {
   );
 }
 
+function V7TelemetryCard() {
+  const decisions = trpc.scanner.decisions.useQuery(undefined, LIVE_QUERY_OPTIONS);
+  const rows = decisions.data ?? [];
+  const latestByAsset = new Map<string, any>();
+  rows.forEach((row) => { if (!latestByAsset.has(row.asset)) latestByAsset.set(row.asset, row); });
+  const metrics = Array.from(latestByAsset.values()).map((row: any) => {
+    let snapshot: any = null;
+    try { snapshot = row.marketSnapshot ? JSON.parse(row.marketSnapshot) : null; } catch { snapshot = null; }
+    return { asset: row.asset, verdict: row.verdict, freshness: snapshot?.v7?.freshness?.ok ? "FRESH" : "WAIT", channel: snapshot?.v7?.channel ?? "V7_CHANNEL", news: snapshot?.v7News?.length ? `${snapshot.v7News.length} event alert(s)` : "No active alert" };
+  });
+  return <Card className="mt-6 border-emerald-500/20 bg-emerald-500/[0.025]"><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="font-display text-xl">V7 Intelligence telemetry</CardTitle><p className="mt-1 text-xs leading-5 text-muted-foreground">Independent XAU, BTC, EUR, and GBP channels with quote freshness, spread, and additive news visibility.</p></div><Badge variant="outline" className="border-emerald-500/30 text-emerald-700">V7 ACTIVE</Badge></div></CardHeader><CardContent><div className="grid gap-3 md:grid-cols-4">{metrics.map((metric) => <div key={metric.asset} className="rounded-xl border bg-background p-3"><p className="text-xs font-semibold">{metric.asset}</p><p className="mt-2 text-[11px] text-muted-foreground">{metric.channel}</p><div className="mt-2 flex items-center justify-between text-xs"><span>{metric.verdict}</span><span className={metric.freshness === "FRESH" ? "text-emerald-700" : "text-amber-700"}>{metric.freshness}</span></div><p className="mt-2 text-[11px] text-muted-foreground">{metric.news}</p></div>)}</div>{!metrics.length && <p className="text-sm text-muted-foreground">Waiting for the next v7 scanner cycle.</p>}</CardContent></Card>;
+}
+
 function MonitoringPage() {
   return (
     <>
       <PageHeading
         eyebrow="Continuous observability"
         title="Monitoring"
-        description="A read-only control room for scanner cadence, market-data availability, v5 hierarchy persistence, zones, and signal-path health. Monitoring never changes v5 decisions or Telegram delivery."
+        description="A read-only control room for scanner cadence, v7 channel freshness, zones, news-event alerts, and signal-path health. Monitoring never changes channel decisions or Telegram delivery."
         action={<Badge variant="outline" className="w-fit border-primary/25 text-primary">LIVE · REFRESH 1 MIN</Badge>}
       />
       <div className="mb-6 grid gap-3 md:grid-cols-3">
         <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">What this watches</p><p className="mt-2 text-sm leading-6">Scheduler callbacks, five-minute freshness, provider availability, and complete hierarchy payloads.</p></CardContent></Card>
-        <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Decision boundary</p><p className="mt-2 text-sm leading-6">4H bias, 1H context, and independent 15M/5M execution remain owned by v5.</p></CardContent></Card>
-        <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Delivery boundary</p><p className="mt-2 text-sm leading-6">Telegram is attempted only after a qualified v5 plan and Entry Locator emission.</p></CardContent></Card>
+        <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Decision boundary</p><p className="mt-2 text-sm leading-6">Each v7 asset channel owns its strategy; shared safety and delivery gates remain common.</p></CardContent></Card>
+        <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Delivery boundary</p><p className="mt-2 text-sm leading-6">Telegram is attempted only after a qualified v7 channel plan and Entry Locator emission.</p></CardContent></Card>
       </div>
       <CallbackStatusCard />
       <ScannerCadenceDiagnostics />
-      <V5SmokeStatusCard />
-      <V5DecisionTrend />
-      <V5ZoneMap />
+      <V7SmokeStatusCard />
+      <V7DecisionTrend />
+      <V7ZoneMap />
+      <V7TelemetryCard />
       <ReplacementChainMonitoringCard />
     </>
   );
@@ -2923,7 +2937,7 @@ function ScannerPage() {
             <div>
               <CardTitle className="font-display text-xl">Required timeframe retrieval</CardTitle>
               <p className="mt-1 text-xs text-muted-foreground">
-                The latest scanner cycle must retrieve 15M confirmation, 1H context, and 4H bias data before v5 can evaluate a complete hierarchy.
+                The latest scanner cycle must retrieve 15M confirmation, 1H context, and 4H bias data before v7 can evaluate the complete 1W–1D–4H–1H–15M hierarchy.
               </p>
             </div>
             <span className="text-xs text-muted-foreground">
@@ -2963,7 +2977,7 @@ function ScannerPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-800">Twelve Data quota or rate-limit warning</p>
               <p className="mt-1 text-sm font-semibold text-amber-950">The latest scanner cycle could not obtain all required market data.</p>
               <p className="mt-1 text-xs leading-5 text-amber-900/80">
-                The {providerIssue.intervals.join(", ")} data request was rejected at {formatDateTime(providerIssue.at)} with provider status {providerIssue.statusCode ?? "unavailable"}. No new v5 signal is emitted from an incomplete cycle.
+                The {providerIssue.intervals.join(", ")} data request was rejected at {formatDateTime(providerIssue.at)} with provider status {providerIssue.statusCode ?? "unavailable"}. No new v7 signal is emitted from an incomplete cycle.
               </p>
             </div>
             <div className="shrink-0 rounded-lg bg-amber-100/70 px-3 py-2 text-xs text-amber-900">
@@ -2974,9 +2988,9 @@ function ScannerPage() {
       ) : null}
       <AdaptiveGeometryDiagnostics />
       <ScannerCadenceDiagnostics />
-      <V5SmokeStatusCard />
-      <V5ZoneMap />
-      <V5DecisionTrend />
+      <V7SmokeStatusCard />
+      <V7ZoneMap />
+      <V7DecisionTrend />
       <div className="grid gap-6 lg:grid-cols-[1.1fr_.9fr]">
         <Card>
           <CardHeader>
@@ -3354,7 +3368,7 @@ function ScannerPage() {
                         {workflow && (
                           <div className="md:col-span-2 rounded-lg border border-primary/15 bg-primary/[0.03] p-3">
                             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                              Hierarchical workflow
+                              V7 channel workflow
                             </p>
                             <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground md:grid-cols-4">
                               <span>4H bias: <b className="text-foreground">{workflow.dominant4h ?? "—"}</b></span>
@@ -3581,7 +3595,7 @@ function WinningRateVersionCard({
         ? "Replacement Intelligence v2"
         : version.version === "forex-trading-combined-document-v3"
           ? "Replacement Intelligence v3"
-          : "Replacement Intelligence v5";
+          : "V7 Intelligence";
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-4 rounded-2xl border bg-card p-5 sm:flex-row sm:items-end sm:justify-between">
@@ -3649,7 +3663,7 @@ function MacroStatusPanel() {
           Official macro layer
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Free official-source context available to active v5. Missing or stale
+          Free official-source context available to active v7. Missing or stale
           data never overrides the full v2 foundation.
         </p>
       </CardHeader>
@@ -3682,8 +3696,8 @@ function V2V3Comparison({ versions }: { versions: WinningRateVersionView[] }) {
   const v3 = versions.find(
     version => version.version === "forex-trading-combined-document-v3"
   );
-  const v5 = versions.find(
-    version => version.version === "forex-trading-combined-document-v5"
+  const v7 = versions.find(
+    version => version.version === "forex-trading-combined-document-v7"
   );
   if (!v2 && !v3) return null;
   return (
@@ -3694,7 +3708,7 @@ function V2V3Comparison({ versions }: { versions: WinningRateVersionView[] }) {
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           These are descriptive paper records, not proof that a newer version is
-          more accurate. V5 is now the active paper-signal model. Compare it
+          more accurate. V7 Intelligence is now the active paper-signal model. Review its
           with historical v3 records, but do not treat the comparison as proof
           of profitability.
         </p>
@@ -3746,22 +3760,22 @@ function V2V3Comparison({ versions }: { versions: WinningRateVersionView[] }) {
         </div>
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-            Replacement Intelligence v5 · active
+            V7 Intelligence · active
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <SummaryStat
               label="Generated"
-              value={v5?.overall.generated ?? 0}
+              value={v7?.overall.generated ?? 0}
               tone="neutral"
             />
             <SummaryStat
               label="Resolved"
-              value={v5?.overall.resolved ?? 0}
+              value={v7?.overall.resolved ?? 0}
               tone="neutral"
             />
             <SummaryStat
               label="Win rate"
-              value={v5?.overall.winRate ?? 0}
+              value={v7?.overall.winRate ?? 0}
               tone="neutral"
             />
           </div>
@@ -3808,7 +3822,7 @@ function intelligenceVersionLabel(version: string) {
       ? "Replacement Intelligence v2"
       : version === "forex-trading-combined-document-v3"
         ? "Replacement Intelligence v3"
-        : "Replacement Intelligence v5";
+        : "V7 Intelligence";
 }
 function LocatorOutcomeReviewCard() {
   const stats = trpc.intelligence.locatorV5OutcomeStats.useQuery(
@@ -3822,7 +3836,7 @@ function LocatorOutcomeReviewCard() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <CardTitle className="font-display text-lg">
-              Current Entry Locator v5 review
+              Current V7 Entry Locator review
             </CardTitle>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
               Outcome evidence scoped only to signals emitted after the stateful
@@ -3830,7 +3844,7 @@ function LocatorOutcomeReviewCard() {
             </p>
           </div>
           <Badge className="border-primary/25 bg-primary/10 text-primary">
-            ENTRY_LOCATOR_V5
+            V7_ENTRY_LOCATOR
           </Badge>
         </div>
       </CardHeader>

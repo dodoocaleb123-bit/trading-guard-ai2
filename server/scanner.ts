@@ -12,10 +12,11 @@ import { reconcileZoneMemory, toWorkflowZone, type PersistedZoneMemory } from ".
 import { describePaperSignalQuality, hasMinimumPaperSignalQuality } from "./paper-signal-quality";
 import { detectPaperTradeContradiction } from "./paper-trade-adjustments";
 import { buildUpgradePaperAdjustmentReason, buildUpgradeTelegramDedupeKey, compareStrongerSameDirectionSetup } from "./paper-trade-upgrades";
-import { fetchMarketSeries, fetchMarketSeriesBatch, fetchMarketSnapshot, fetchStrategyRulesFromSupabase, forensicAnalysis, formatApprovedTelegramMessage, formatOutcomeTelegramMessage, formatPaperTradeAdjustmentTelegramMessage, formatPaperTradeContradictionWarningTelegramMessage, formatPaperTradeUpgradeTelegramMessage, formatAuditResult, generateScannerDecisions, mirrorToSupabase, normalizeForensicFinding, sendTelegramMessage, type MarketSeries, type MarketSnapshot } from "./integrations";
+import { fetchEodhdXagConfirmation, fetchEodhdXagQuote, fetchMarketSeries, fetchMarketSeriesBatch, fetchMarketSnapshot, fetchStrategyRulesFromSupabase, forensicAnalysis, formatApprovedTelegramMessage, formatOutcomeTelegramMessage, formatPaperTradeAdjustmentTelegramMessage, formatPaperTradeContradictionWarningTelegramMessage, formatPaperTradeUpgradeTelegramMessage, formatAuditResult, generateScannerDecisions, mirrorToSupabase, normalizeForensicFinding, sendTelegramMessage, type MarketSeries, type MarketSnapshot } from "./integrations";
 import { notifyOwner } from "./_core/notification";
-import { buildV7ChannelResult, calculateV7Freshness, V7_GENERATION_MODE, V7_INTELLIGENCE_VERSION, isWithinV7Session, type V7LiveQuote } from "./v7-intelligence";
+import { buildV7ChannelResult, calculateV7Freshness, V7_GENERATION_MODE, V7_INTELLIGENCE_VERSION, V7_NEWS_EVENT_GENERATION_MODE, isWithinV7Session, type V7LiveQuote } from "./v7-intelligence";
 import { buildV7NewsObservations } from "./v7-news";
+import { evaluateV7AssetChannel, evaluateV7NewsEvent, type V7NewsEventCandidate } from "./v7-channels";
 
 const WATCHLIST = ["EUR/USD", "XAU/USD", "GBP/USD", "BTC/USD"] as const;
 export const TWELVE_DATA_ASSET_GROUPS = [
@@ -191,10 +192,10 @@ export const MAX_OUTCOME_TRACKS_PER_RUN = 32;
 export const MAX_FAILED_OUTCOME_RETRIES_PER_RUN = 2;
 
 type ScanUserResult = { created: number; tracked: number; adjustments: number; marketData: ScanMarketDataStatus; marketDataError?: string | null };
-type SharedMarketData = { series5m: Map<string, MarketSeries>; series15m: Map<string, MarketSeries>; series1h: Map<string, MarketSeries>; series4h: Map<string, MarketSeries>; quotes: Map<string, V7LiveQuote> };
+type SharedMarketData = { series5m: Map<string, MarketSeries>; series15m: Map<string, MarketSeries>; series1h: Map<string, MarketSeries>; series4h: Map<string, MarketSeries>; series1d: Map<string, MarketSeries>; series1w: Map<string, MarketSeries>; quotes: Map<string, V7LiveQuote>; xagQuote?: V7LiveQuote | null; xagDirection?: "BUY" | "SELL" | null; xagFresh: boolean };
 type ScanUserInput = { marketData?: SharedMarketData; marketDataError?: string | null };
 
-async function fetchGroupedMarketSeriesBatch(interval: "5min" | "15min" | "1h" | "4h") {
+async function fetchGroupedMarketSeriesBatch(interval: "5min" | "15min" | "1h" | "4h" | "1day" | "1week") {
   const groupedResults = await Promise.allSettled(TWELVE_DATA_ASSET_GROUPS.map((assets) => fetchMarketSeriesBatch(assets, interval)));
   const failures = groupedResults.flatMap((result, index) => result.status === "rejected" ? [{ group: index === 0 ? "EUR_XAU" : "GBP_BTC", message: result.reason instanceof Error ? result.reason.message : String(result.reason) }] : []);
   if (failures.length) throw new Error(failures.map((failure) => `Twelve Data ${failure.group} group unavailable: ${failure.message}`).join(" | "));
@@ -211,14 +212,16 @@ async function fetchSharedMarketData(): Promise<SharedMarketData> {
     fetchGroupedMarketSeriesBatch("15min"),
     fetchGroupedMarketSeriesBatch("1h"),
     fetchGroupedMarketSeriesBatch("4h"),
+    (process.env.NODE_ENV === "test" || process.env.VITEST) ? Promise.resolve(new Map<string, MarketSeries>()) : fetchGroupedMarketSeriesBatch("1day"),
+    (process.env.NODE_ENV === "test" || process.env.VITEST) ? Promise.resolve(new Map<string, MarketSeries>()) : fetchGroupedMarketSeriesBatch("1week"),
   ]);
-  const batchLabels = ["5min", "15min", "1h", "4h"] as const;
+  const batchLabels = ["5min", "15min", "1h", "4h", "1day", "1week"] as const;
   const optional5m = batchResults[0];
   if (optional5m.status === "rejected") console.warn(`[Scanner] Optional 5min confirmation batch unavailable; continuing with 15min confirmation: ${optional5m.reason instanceof Error ? optional5m.reason.message : String(optional5m.reason)}`);
   const failures = batchResults.slice(1).flatMap((result, index) => result.status === "rejected" ? [{ interval: batchLabels[index + 1], message: result.reason instanceof Error ? result.reason.message : String(result.reason) }] : []);
   if (failures.length) throw new Error(failures.map((failure) => `Twelve Data ${failure.interval} unavailable: ${failure.message}`).join(" | "));
   const series5m = optional5m.status === "fulfilled" ? optional5m.value : new Map<string, MarketSeries>();
-  const [series15m, series1h, series4h] = batchResults.slice(1).map((result) => (result as PromiseFulfilledResult<Map<string, MarketSeries>>).value) as [Map<string, MarketSeries>, Map<string, MarketSeries>, Map<string, MarketSeries>];
+  const [series15m, series1h, series4h, series1d, series1w] = batchResults.slice(1).map((result) => (result as PromiseFulfilledResult<Map<string, MarketSeries>>).value) as [Map<string, MarketSeries>, Map<string, MarketSeries>, Map<string, MarketSeries>, Map<string, MarketSeries>, Map<string, MarketSeries>];
   const quoteResults = await Promise.allSettled(WATCHLIST.map((asset) => fetchMarketSnapshot(asset, "1min")));
   const quotes = new Map<string, V7LiveQuote>();
   quoteResults.forEach((result, index) => {
@@ -227,8 +230,24 @@ async function fetchSharedMarketData(): Promise<SharedMarketData> {
       quotes.set(WATCHLIST[index], { asset: WATCHLIST[index], price: quote.price, bid: quote.bid ?? null, ask: quote.ask ?? null, spread: quote.spread ?? null, fetchedAt: quote.fetchedAt, providerTimestamp: quote.providerTimestamp ?? null });
     } else if (result.status === "rejected") console.warn(`[Scanner] v7 quote unavailable for ${WATCHLIST[index]}:`, result.reason instanceof Error ? result.reason.message : result.reason);
   });
-  console.info(`[Scanner] Shared market-data window completed series5m=${series5m.size} series15m=${series15m.size} series1h=${series1h.size} series4h=${series4h.size} quotes=${quotes.size} durationMs=${Date.now() - startedAt} at=${new Date().toISOString()}`);
-  return { series5m, series15m, series1h, series4h, quotes };
+  let xagQuote: V7LiveQuote | null = null;
+  try {
+    const quote = await fetchEodhdXagQuote();
+    xagQuote = { asset: "XAG/USD", price: quote.price, bid: quote.bid, ask: quote.ask, spread: quote.spread, fetchedAt: quote.fetchedAt, providerTimestamp: quote.providerTimestamp };
+  } catch (error) {
+    console.warn(`[Scanner] v7 XAG quote unavailable:`, error instanceof Error ? error.message : error);
+  }
+  let xagDirection: "BUY" | "SELL" | null = null;
+  let xagFresh = false;
+  try {
+    const confirmation = await fetchEodhdXagConfirmation();
+    xagDirection = confirmation.direction;
+    xagFresh = confirmation.ageMs <= 30_000;
+  } catch (error) {
+    console.warn(`[Scanner] v7 XAG confirmation unavailable:`, error instanceof Error ? error.message : error);
+  }
+  console.info(`[Scanner] Shared market-data window completed series5m=${series5m.size} series15m=${series15m.size} series1h=${series1h.size} series4h=${series4h.size} series1d=${series1d.size} series1w=${series1w.size} quotes=${quotes.size} xag=${xagQuote ? "available" : "unavailable"} durationMs=${Date.now() - startedAt} at=${new Date().toISOString()}`);
+  return { series5m, series15m, series1h, series4h, series1d, series1w, quotes, xagQuote, xagDirection, xagFresh };
 }
 
 export function parseMarketSeriesCandleAt(series: Pick<MarketSeries, "values" | "fetchedAt">): Date {
@@ -402,15 +421,20 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
   let series15m: Map<string, MarketSeries>;
   let series1h: Map<string, MarketSeries>;
   let series4h: Map<string, MarketSeries>;
+  let series1d: Map<string, MarketSeries>;
+  let series1w: Map<string, MarketSeries>;
   let quotes: Map<string, V7LiveQuote>;
+  let xagQuote: V7LiveQuote | null | undefined;
+  let xagDirection: "BUY" | "SELL" | null | undefined;
+  let xagFresh = false;
   const marketDataStartedAt = Date.now();
   console.info(`[Scanner] Market-data window ${input?.marketData ? "reused" : "started"} user=${userId} at=${new Date(marketDataStartedAt).toISOString()}`);
   try {
     if (input?.marketDataError) throw new Error(input.marketDataError);
     if (input?.marketData) {
-      ({ series5m, series15m, series1h, series4h, quotes } = input.marketData);
+      ({ series5m, series15m, series1h, series4h, series1d = new Map<string, MarketSeries>(), series1w = new Map<string, MarketSeries>(), quotes, xagQuote, xagDirection, xagFresh = false } = input.marketData);
     } else {
-      ({ series5m, series15m, series1h, series4h } = await fetchSharedMarketData());
+      ({ series5m, series15m, series1h, series4h, series1d, series1w, quotes, xagQuote, xagDirection, xagFresh } = await fetchSharedMarketData());
     }
     console.info(`[Scanner] Market-data window ready user=${userId} series15m=${series15m.size} series5m=${series5m.size} series1h=${series1h.size} durationMs=${Date.now() - marketDataStartedAt} at=${new Date().toISOString()}`);
   } catch (error) {
@@ -425,6 +449,8 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
   series15m.forEach((series, symbol) => seriesCache.set(`${symbol}:15MIN`, series));
   series1h.forEach((series, symbol) => seriesCache.set(`${symbol}:1H`, series));
   series4h.forEach((series, symbol) => seriesCache.set(`${symbol}:4H`, series));
+  series1d.forEach((series, symbol) => seriesCache.set(`${symbol}:1D`, series));
+  series1w.forEach((series, symbol) => seriesCache.set(`${symbol}:1W`, series));
   quotes ??= new Map<string, V7LiveQuote>();
   const priorZoneRows = await listV5ZoneHistory(userId) as unknown as PersistedZoneMemory[];
   const maintainedZoneRows = await reconcileAndPersistV5ZoneMemory(userId, [
@@ -484,25 +510,25 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
         };
         const fundamentalContext = asset === "BTC/USD" ? undefined : await fetchOfficialMacroContext(asset);
         const v7News = buildV7NewsObservations(asset as any, fundamentalContext);
-        const detectedIndicators = market.marketContext ? detectSetupIndicators({ market: { asset, close: series.close, interval: series.interval, values: series.values }, context: market.marketContext, fundamentalContext }, replacementModel) : [];
-        const hasDirectionalIndicator = detectedIndicators.some((indicator) => indicator.direction !== "NEUTRAL");
+        const release = v7News.find((event) => event.phase === "RELEASE_WARNING");
         const series4h = seriesCache.get(`${asset}:4H`);
         const series1hForWorkflow = seriesCache.get(`${asset}:1H`);
         const series15mForWorkflow = seriesCache.get(`${asset}:15MIN`);
         const series5mForWorkflow = seriesCache.get(`${asset}:5MIN`);
-        const replacementIntelligence = market.marketContext && hasDirectionalIndicator
-          ? evaluateHierarchicalWorkflow({ asset, timeframe, primary: series, series4h, series1h: series1hForWorkflow, series15m: series15mForWorkflow, series5m: series5mForWorkflow, priorZones: maintainedZonesByAsset.get(asset) ?? [], fundamentalContext, acceptedLessons }, replacementModel)
-          : null;
+        const series1dForWorkflow = seriesCache.get(`${asset}:1D`);
+        const series1wForWorkflow = seriesCache.get(`${asset}:1W`);
         const quote = quotes.get(asset);
         const freshness = calculateV7Freshness({ asset, series: series5mForWorkflow ?? series15mForWorkflow ?? series, quote });
-        const v7 = buildV7ChannelResult({ asset, timeframe, freshness, strategyQualified: Boolean(replacementIntelligence?.workflow?.eligible), sessionOpen: isWithinV7Session(), base: { direction: replacementIntelligence?.direction, entry: replacementIntelligence?.entry, stopLoss: replacementIntelligence?.stopLoss, takeProfit: replacementIntelligence?.takeProfit, confidence: replacementIntelligence?.confidence, confluenceScore: replacementIntelligence?.confluenceScore, adjustments: replacementIntelligence?.adjustments, ruleEvidence: replacementIntelligence?.ruleEvidence, zones: replacementIntelligence?.workflow?.zones, fundamentalContext }, confirmations: replacementIntelligence?.setupIndicators?.map((item: any) => item.observation ?? item.id).filter(Boolean) });
-        const workflowIndicators = replacementIntelligence?.setupIndicators ?? detectedIndicators;
-        if (!market.marketContext || !replacementIntelligence || v7.status !== "QUALIFIED") {
-          return { asset, timeframe, noDirectionalSetup: true, entryLocatorReady: false, entryLocatorReason: v7.waitReason ?? "v7 channel is waiting.", verdict: "SKIPPED" as const, confidence: 0, confluenceScore: 0, marketRegime: `V7_WAITING/${v7.channel}`, adjustments: v7.rationale, direction: "NEUTRAL" as const, entry: null, stopLoss: null, takeProfit: null, ruleEvidence: v7.confirmations, ruleFindings: [], decisionTrace: undefined, setupIndicators: workflowIndicators, market: { ...market, fundamentalContext, v7, v7News, replacementIntelligence: null, v3BaselineIntelligence: null, replacementMarketRegime: `V7_WAITING/${v7.channel}` } };
+        const v7 = evaluateV7AssetChannel({ asset, timeframe, weekly: series1wForWorkflow, daily: series1dForWorkflow, h4: series4h, h1: series1hForWorkflow, m15: series15mForWorkflow, m5: series5mForWorkflow, freshness, sessionOpen: isWithinV7Session(), xagDirection, xagFresh });
+        const newsEventCandidate = release && asset !== "BTC/USD" ? evaluateV7NewsEvent({ asset: asset as Exclude<typeof asset, "BTC/USD">, event: { title: release.event, date: release.eventTime, actual: release.actual, forecast: release.forecast, impact: release.impact }, m5: series5mForWorkflow, freshness }) : null;
+        const workflowIndicators = v7.confirmations.map((observation) => ({ id: observation, observation, direction: v7.direction }));
+        const replacementIntelligence = v7.status === "QUALIFIED" ? {
+          direction: v7.direction, entry: v7.entry, stopLoss: v7.stopLoss, takeProfit: v7.takeProfit, confidence: v7.confidence, confluenceScore: v7.confluenceScore, adjustments: v7.rationale, ruleEvidence: v7.confirmations, ruleFindings: [], setupIndicators: workflowIndicators, marketRegime: v7.channel, decisionTrace: undefined,
+          workflow: { eligible: true, geometryValid: true, geometryReason: "v7 channel structural geometry passed", targetBoundary: v7.takeProfit, zones: v7.zones, explanation: v7.rationale },
+        } : null;
+        if (v7.status !== "QUALIFIED" || !replacementIntelligence) {
+          return { asset, timeframe, noDirectionalSetup: true, entryLocatorReady: false, entryLocatorReason: v7.waitReason ?? "v7 channel is waiting.", verdict: "SKIPPED" as const, confidence: 0, confluenceScore: 0, marketRegime: `V7_WAITING/${v7.channel}`, adjustments: v7.rationale, direction: "NEUTRAL" as const, entry: null, stopLoss: null, takeProfit: null, ruleEvidence: v7.confirmations, ruleFindings: [], decisionTrace: undefined, setupIndicators: workflowIndicators, market: { ...market, fundamentalContext, v7, v7News, v7NewsEventCandidate: newsEventCandidate, replacementIntelligence: null, v3BaselineIntelligence: null, replacementMarketRegime: `V7_WAITING/${v7.channel}` } };
         }
-        const baselineEvaluation = market.marketContext ? safelyEvaluateBaselineIntelligence({ asset, close: series.close, interval: series.interval, values: series.values, marketContext: market.marketContext, fundamentalContext, acceptedLessons }, replacementBaselineModel) : { status: "UNAVAILABLE" as const, decision: undefined, error: "Market context unavailable" };
-        const v3BaselineIntelligence = baselineEvaluation.decision;
-        if (baselineEvaluation.status !== "AVAILABLE") console.warn(`[Scanner] ${asset} ${timeframe} baseline unavailable; continuing with hierarchical workflow: ${baselineEvaluation.error ?? "unknown baseline error"}`);
         const workflowQualified = replacementIntelligence.workflow.eligible;
         return attachSetupIndicators({
           asset,
@@ -521,7 +547,7 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
           ruleEvidence: replacementIntelligence.ruleEvidence,
           ruleFindings: replacementIntelligence.ruleFindings,
           decisionTrace: replacementIntelligence.decisionTrace,
-          market: { ...market, fundamentalContext, setupIndicators: workflowIndicators, v7, v7News, intelligenceSeed: replacementIntelligence, replacementIntelligence, v3BaselineIntelligence, v3BaselineStatus: baselineEvaluation.status, v3BaselineError: baselineEvaluation.error, replacementMarketRegime: `V7_${replacementIntelligence.marketRegime}` },
+          market: { ...market, fundamentalContext, setupIndicators: workflowIndicators, v7, v7News, v7NewsEventCandidate: newsEventCandidate, intelligenceSeed: replacementIntelligence, replacementIntelligence, replacementMarketRegime: `V7_${replacementIntelligence.marketRegime}` },
         }, workflowIndicators);
       }));
     decisions.metrics = { snapshots: candidates.length, completeResponses: decisions.length, retries: 0 };
@@ -696,12 +722,34 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
       console.warn(`[Scanner] ${asset} ${timeframe} skipped:`, error instanceof Error ? error.message : error);
     }
   }
+  await emitV7NewsEventSignals(userId, decisions);
   const newlyTracked = await trackOpenSignals(userId, seriesCache, createdSignalIds);
   const retriedOutcomes = await retryFailedOutcomeDeliveries(userId);
   const recoveredOutcomes = await recoverMissingOutcomeDeliveries(userId);
   if (retriedOutcomes || recoveredOutcomes) console.info(`[Tracker] Recovered ${retriedOutcomes} failed and ${recoveredOutcomes} missing outcome notification(s).`);
   const adjustments = await monitorOpenSignalContradictions(userId, decisions, seriesCache);
   return { created: created.length, tracked: newlyTracked + retriedOutcomes + recoveredOutcomes, adjustments, marketData: "available" };
+}
+
+async function emitV7NewsEventSignals(userId: number, decisions: Array<any>) {
+  const db = await getDb();
+  if (!db) return;
+  for (const decision of decisions) {
+    const candidate = decision.market?.v7NewsEventCandidate;
+    if (!candidate || candidate.asset === "BTC/USD" || candidate.riskReward < 2) continue;
+    try {
+      const input = { userId, asset: candidate.asset, timeframe: "5MIN", direction: candidate.direction, entry: String(candidate.entry), stopLoss: String(candidate.stopLoss), takeProfit: String(candidate.takeProfit), riskReward: candidate.riskReward.toFixed(2), confidence: String(candidate.confidence), confluenceScore: String(candidate.confluenceScore), intelligenceVersion: V7_INTELLIGENCE_VERSION, generationMode: V7_NEWS_EVENT_GENERATION_MODE, signalFingerprint: buildAtomicSignalFingerprint({ userId, asset: candidate.asset, timeframe: "5MIN", direction: candidate.direction, entry: String(candidate.entry), stopLoss: String(candidate.stopLoss), takeProfit: String(candidate.takeProfit), riskReward: candidate.riskReward.toFixed(2), confidence: String(candidate.confidence), confluenceScore: String(candidate.confluenceScore) }) };
+      if (await hasExactGeneratedSignal(input)) continue;
+      const rationale = `NEWS-EVENT SIGNAL: ${candidate.rationale} Ordinary ${candidate.asset} channel signals remain independent and were not blocked.`;
+      const [result] = await db.insert(generatedSignals).values({ ...input, rationale, intelligenceComponents: JSON.stringify(candidate.evidence), marketRegime: "V7_NEWS_EVENT_CONFIRMED", status: "PENDING" });
+      const signalId = Number(result.insertId);
+      await mirrorToSupabase("generated_signals", { user_id: userId, signal_id: signalId, asset: candidate.asset, timeframe: "5MIN", direction: candidate.direction, entry: candidate.entry, stopLoss: candidate.stopLoss, takeProfit: candidate.takeProfit, riskReward: candidate.riskReward, confidence: candidate.confidence, confluence_score: candidate.confluenceScore, status: "PENDING", rationale });
+      const delivery = await sendTelegramMessage(formatApprovedTelegramMessage({ asset: candidate.asset, timeframe: "5MIN", direction: candidate.direction, entry: candidate.entry, stopLoss: candidate.stopLoss, takeProfit: candidate.takeProfit, confidence: candidate.confidence, riskReward: candidate.riskReward, adjustments: rationale, ruleEvidence: candidate.evidence, confluenceScore: candidate.confluenceScore, generationSource: "NEWS_EVENT" }), candidate.asset);
+      await recordTelegramDelivery({ userId, signalId, kind: "SIGNAL", status: delivery.delivered ? "DELIVERED" : "FAILED", telegramMessageId: delivery.telegramMessageId, dedupeKey: buildSignalDeliveryDedupeKey(signalId), error: delivery.error });
+    } catch (error) {
+      console.warn(`[Scanner] NEWS-EVENT signal skipped for ${candidate.asset}:`, error instanceof Error ? error.message : error);
+    }
+  }
 }
 
 async function monitorOpenSignalContradictions(userId: number, decisions: Array<any>, seriesCache: Map<string, MarketSeries>) {

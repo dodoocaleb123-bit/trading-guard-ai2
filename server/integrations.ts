@@ -20,7 +20,7 @@ export type MarketSnapshot = {
   bid?: number | null;
   ask?: number | null;
   spread?: number | null;
-  interval?: "5min" | "15min" | "1h" | "4h";
+  interval?: "5min" | "15min" | "1h" | "4h" | "1day" | "1week";
   trend?: "UP" | "DOWN";
   values?: Array<Record<string, unknown>>;
   marketContext?: MarketContext | null;
@@ -229,7 +229,7 @@ export async function fetchMarketSnapshot(asset: string, interval = "15min") {
 
 export type MarketSeries = {
   symbol: string;
-  interval: "5min" | "15min" | "1h" | "4h";
+  interval: "5min" | "15min" | "1h" | "4h" | "1day" | "1week";
   values: Array<Record<string, unknown>>;
   close: number;
   trend: "UP" | "DOWN";
@@ -237,7 +237,7 @@ export type MarketSeries = {
   marketContext: MarketContext | null;
 };
 
-function parseMarketSeries(symbol: string, interval: "5min" | "15min" | "1h" | "4h", payload: any): MarketSeries {
+function parseMarketSeries(symbol: string, interval: "5min" | "15min" | "1h" | "4h" | "1day" | "1week", payload: any): MarketSeries {
   if (payload?.status === "error") throw new Error(payload.message ?? "OHLCV data unavailable");
   const values = Array.isArray(payload?.values) ? payload.values : [];
   if (values.length < 3) throw new Error("Not enough OHLCV data for timeframe");
@@ -249,13 +249,13 @@ function parseMarketSeries(symbol: string, interval: "5min" | "15min" | "1h" | "
   return { symbol, interval, values, close, trend: close >= priorClose ? "UP" : "DOWN", fetchedAt: new Date().toISOString(), marketContext: calculateMarketContext(values) };
 }
 
-export async function fetchMarketSeries(asset: string, interval: "5min" | "15min" | "1h" | "4h") {
+export async function fetchMarketSeries(asset: string, interval: "5min" | "15min" | "1h" | "4h" | "1day" | "1week") {
   const symbol = normalizeAsset(asset);
   const response = await requestTwelveData("https://api.twelvedata.com/time_series", { symbol, interval, outputsize: 200, order: "ASC", timezone: "UTC" }, 15000, [symbol]);
   return parseMarketSeries(symbol, interval, response.data);
 }
 
-export async function fetchMarketSeriesBatch(assets: readonly string[], interval: "5min" | "15min" | "1h" | "4h") {
+export async function fetchMarketSeriesBatch(assets: readonly string[], interval: "5min" | "15min" | "1h" | "4h" | "1day" | "1week") {
   const symbols = assets.map(normalizeAsset);
   const startedAt = Date.now();
   console.info(`[Market] Twelve Data batch started interval=${interval} assets=${symbols.length} at=${new Date(startedAt).toISOString()}`);
@@ -282,6 +282,28 @@ export async function fetchMarketSeriesBatch(assets: readonly string[], interval
     console.warn(`[Market] Twelve Data batch failed interval=${interval} assets=${symbols.length} durationMs=${Date.now() - startedAt}:`, error instanceof Error ? error.message : error);
     throw error;
   }
+}
+
+export async function fetchEodhdXagQuote() {
+  if (!ENV.eodhdApiKey) throw new Error("EODHD_API_KEY is not configured");
+  const response = await axios.get("https://eodhd.com/api/real-time/XAGUSD.FOREX", { params: { api_token: ENV.eodhdApiKey, fmt: "json" }, timeout: 15000 });
+  const raw = Array.isArray(response.data) ? response.data[0] : response.data;
+  const price = Number(raw?.close ?? raw?.price);
+  const bid = Number.isFinite(Number(raw?.bid)) ? Number(raw.bid) : null;
+  const ask = Number.isFinite(Number(raw?.ask)) ? Number(raw.ask) : null;
+  if (!Number.isFinite(price)) throw new Error("EODHD returned no usable XAG/USD price");
+  return { symbol: "XAG/USD", price, bid, ask, spread: bid != null && ask != null && ask > bid ? ask - bid : null, fetchedAt: new Date().toISOString(), providerTimestamp: raw?.timestamp ? new Date(Number(raw.timestamp) * 1000).toISOString() : raw?.datetime ?? null };
+}
+
+export async function fetchEodhdXagConfirmation() {
+  if (!ENV.eodhdApiKey) throw new Error("EODHD_API_KEY is not configured");
+  const response = await axios.get("https://eodhd.com/api/intraday/XAGUSD.FOREX", { params: { api_token: ENV.eodhdApiKey, interval: "5m", fmt: "json", outputsize: 30 }, timeout: 15000 });
+  const rows = Array.isArray(response.data) ? response.data : [];
+  const last = rows.at(-1), previous = rows.at(-2);
+  const price = Number(last?.close), prior = Number(previous?.close);
+  const timestamp = last?.datetime ? new Date(String(last.datetime)).toISOString() : null;
+  if (!Number.isFinite(price) || !Number.isFinite(prior) || !timestamp) throw new Error("EODHD returned insufficient XAG/USD confirmation candles");
+  return { direction: price >= prior ? "BUY" as const : "SELL" as const, providerTimestamp: timestamp, ageMs: Math.max(0, Date.now() - Date.parse(timestamp)) };
 }
 
 export function shouldNotifyApprovedAudit(verdict: string) {

@@ -10,6 +10,6 @@ describe("Cherry AI chat routing", () => {
   it("keeps educational and informational Cherry questions in conversation mode", () => {
     expect(isCompleteTradeIdea("What does risk management mean in forex trading?")).toBe(false);
     expect(routeChatSubmission("CHERRY", "What does risk management mean in forex trading?", "AUDIT")).toBe("CONVERSATION");
-    expect(routeChatSubmission("CHERRY", "What zones did v5 identify for BTC/USD 1H?", "AUDIT")).toBe("CONVERSATION");
+    expect(routeChatSubmission("CHERRY", "What zones did v7 identify for BTC/USD 1H?", "AUDIT")).toBe("CONVERSATION");
   });
 });
