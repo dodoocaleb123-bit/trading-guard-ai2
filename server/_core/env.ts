@@ -13,7 +13,7 @@ export const ENV = {
   supabaseUrl: process.env.SUPABASE_URL ?? "",
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? "",
   fredApiKey: process.env.FRED_API_KEY ?? "",
-  eodhdApiKey: process.env.EODHD_API_KEY ?? "",
+  eodhdApiKey: process.env.EODHD_API_KEY ?? process.env.EODHD_KEY ?? "",
   twelveDataApiKey: process.env.TWELVE_DATA_API_KEY ?? "",
   twelveDataApiKeySlots: [
     process.env.TWELVE_DATA_API_KEY,
