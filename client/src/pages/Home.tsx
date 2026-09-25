@@ -2759,6 +2759,104 @@ function V7TelemetryCard() {
   return <Card className="mt-6 border-emerald-500/20 bg-emerald-500/[0.025]"><CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><div><CardTitle className="font-display text-xl">V7 Intelligence telemetry</CardTitle><p className="mt-1 text-xs leading-5 text-muted-foreground">Independent XAU, BTC, EUR, and GBP channels with quote freshness, spread, and additive news visibility.</p></div><Badge variant="outline" className="border-emerald-500/30 text-emerald-700">V7 ACTIVE</Badge></div></CardHeader><CardContent><div className="grid gap-3 md:grid-cols-4">{metrics.map((metric) => <div key={metric.asset} className="rounded-xl border bg-background p-3"><p className="text-xs font-semibold">{metric.asset}</p><p className="mt-2 text-[11px] text-muted-foreground">{metric.channel}</p><div className="mt-2 flex items-center justify-between text-xs"><span>{metric.verdict}</span><span className={metric.freshness === "FRESH" ? "text-emerald-700" : "text-amber-700"}>{metric.freshness}</span></div><p className="mt-2 text-[11px] text-muted-foreground">{metric.news}</p></div>)}</div>{!metrics.length && <p className="text-sm text-muted-foreground">Waiting for the next v7 scanner cycle.</p>}</CardContent></Card>;
 }
 
+type V7AuditRow = {
+  asset: string;
+  timeframe: string;
+  verdict: string;
+  confidence: string | number;
+  confluenceScore: string | number;
+  decisionReason?: string | null;
+  marketSnapshot?: string | null;
+  generatedDirection?: string | null;
+  generatedEntry?: string | number | null;
+  generatedStopLoss?: string | number | null;
+  generatedTakeProfit?: string | number | null;
+  createdAt?: Date | string | null;
+};
+
+function parseV7AuditJson(value: unknown): any {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try { return JSON.parse(value); } catch { return null; }
+}
+
+function V7AuditPage() {
+  const decisions = trpc.scanner.decisions.useQuery(undefined, LIVE_QUERY_OPTIONS);
+  const rows = (decisions.data ?? []) as V7AuditRow[];
+  const latest = new Map<string, V7AuditRow>();
+  for (const row of rows) {
+    const key = `${row.asset}|${row.timeframe}`;
+    if (!latest.has(key)) latest.set(key, row);
+  }
+  const channelRows = Array.from(latest.values()).filter((row) => ["XAU/USD", "BTC/USD", "EUR/USD", "GBP/USD"].includes(row.asset));
+  const newsItems: Array<{ asset: string; title: string; status: string; detail: string }> = [];
+  for (const row of channelRows) {
+    const snapshot = parseV7AuditJson(row.marketSnapshot);
+    const observations = Array.isArray(snapshot?.v7News) ? snapshot.v7News : [];
+    for (const item of observations) {
+      newsItems.push({
+        asset: row.asset,
+        title: String(item.title ?? item.eventTitle ?? "Market event"),
+        status: String(item.status ?? item.kind ?? "OBSERVED"),
+        detail: String(item.detail ?? item.rationale ?? item.direction ?? "Additive news-path observation"),
+      });
+    }
+  }
+  return (
+    <>
+      <PageHeading
+        eyebrow="V7 qualification ledger"
+        title="V7 Audit"
+        description="A scan-by-scan explanation of where each independent asset channel passed or stopped, including the separate non-blocking news-event path. Refreshes automatically after each scanner cycle."
+        action={<Badge variant="outline" className="border-emerald-500/30 text-emerald-700">LIVE · REFRESH 1 MIN</Badge>}
+      />
+      {decisions.isError ? <DataError text="The latest V7 audit decisions could not be loaded. Refresh after the scanner database connection recovers." /> : null}
+      <Card className="mb-6 border-primary/15 bg-primary/[0.025]">
+        <CardContent className="p-4 text-sm leading-6 text-muted-foreground">
+          Each card is the newest persisted decision for an asset/timeframe. Green means the evidence was present in that scan; amber means the channel was waiting. News is shown separately and never changes the ordinary channel verdict.
+        </CardContent>
+      </Card>
+      <div className="space-y-4">
+        {decisions.isLoading ? <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading the latest channel audit…</CardContent></Card> : null}
+        {!decisions.isLoading && !channelRows.length ? <Card><CardContent className="p-6 text-sm text-muted-foreground">No persisted channel decisions are available yet. The first completed scanner cycle will appear here.</CardContent></Card> : null}
+        {channelRows.map((row) => {
+          const snapshot = parseV7AuditJson(row.marketSnapshot);
+          const v7 = snapshot?.v7 ?? {};
+          const freshness = v7.freshness ?? {};
+          const confirmations = Array.isArray(v7.confirmations) ? v7.confirmations : [];
+          const qualified = row.verdict === "APPROVED" || v7.status === "QUALIFIED";
+          const reason = row.decisionReason ?? v7.waitReason ?? "No additional reason recorded.";
+          const checks = [
+            { label: "Channel strategy result", pass: qualified, detail: qualified ? "The channel produced a qualified plan." : reason },
+            { label: "Market-data freshness", pass: freshness.ok === true ? true : freshness.ok === false ? false : null, detail: freshness.ok === true ? "Quote and execution candle are fresh." : (freshness.reasons ?? []).join("; ") || "Freshness evidence was not included in this decision." },
+            { label: "Directional structure", pass: v7.direction && v7.direction !== "NEUTRAL", detail: v7.direction ? `Direction: ${v7.direction}` : "No directional structure was confirmed." },
+            { label: "POI / liquidity / confirmation", pass: confirmations.length > 0 ? qualified : null, detail: confirmations.length ? confirmations.join(" · ") : "No completed confirmation sequence was recorded." },
+            { label: "Executable geometry", pass: qualified && Number(row.generatedEntry ?? v7.entry) > 0, detail: qualified ? `Entry ${row.generatedEntry ?? v7.entry ?? "—"} · SL ${row.generatedStopLoss ?? v7.stopLoss ?? "—"} · TP ${row.generatedTakeProfit ?? v7.takeProfit ?? "—"}` : "Not evaluated because the channel did not qualify." },
+            { label: "Hard minimum RR 1:2", pass: qualified && Number(v7.riskReward ?? 0) >= 2 ? true : qualified ? false : null, detail: v7.riskReward ? `Final RR: 1:${v7.riskReward}` : "No final executable ratio recorded." },
+            { label: "News policy", pass: true, detail: row.asset === "BTC/USD" ? "BTC is excluded from the news path." : "News is additive-only and did not block this channel decision." },
+          ];
+          return <Card key={`${row.asset}-${row.timeframe}`} className="overflow-hidden">
+            <CardHeader className="border-b bg-muted/20 py-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div><CardTitle className="font-display text-lg">{row.asset} <span className="text-muted-foreground">· {row.timeframe}</span></CardTitle><p className="mt-1 text-xs text-muted-foreground">Last scan: {formatDateTime(row.createdAt)} · confidence {row.confidence ?? "—"} · confluence {row.confluenceScore ?? "—"}</p></div>
+                <StatusPill status={qualified ? "QUALIFIED" : "WAITING"} />
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-2 p-4 md:grid-cols-2">
+              {checks.map((check) => <div key={check.label} className="flex gap-3 rounded-xl border bg-background p-3"><div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold", check.pass === true ? "bg-emerald-100 text-emerald-700" : check.pass === false ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground")}>{check.pass === true ? "✓" : check.pass === false ? "!" : "–"}</div><div className="min-w-0"><p className="text-sm font-medium">{check.label}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{check.detail}</p></div></div>)}
+            </CardContent>
+          </Card>;
+        })}
+      </div>
+      <Card className="mt-6 border-sky-500/20 bg-sky-500/[0.025]">
+        <CardHeader><CardTitle className="font-display text-xl">Additive news-event path</CardTitle><p className="text-xs leading-5 text-muted-foreground">News reminders, release observations, and NEWS-EVENT candidates are audited independently. They do not block ordinary channel signals; BTC/USD remains news-data-free.</p></CardHeader>
+        <CardContent className="space-y-3">
+          {!newsItems.length ? <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">No news-event observation was recorded in the latest persisted scans. This is not a channel failure.</div> : newsItems.slice(0, 20).map((item, index) => <div key={`${item.asset}-${item.title}-${index}`} className="flex flex-col gap-2 rounded-xl border bg-background p-4 md:flex-row md:items-center md:justify-between"><div><p className="text-sm font-medium">{item.asset} · {item.title}</p><p className="mt-1 text-xs text-muted-foreground">{item.detail}</p></div><Badge variant="outline" className="w-fit border-sky-500/30 text-sky-700">{item.status}</Badge></div>)}
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
 function MonitoringPage() {
   return (
     <>
@@ -4098,6 +4196,8 @@ export default function Home() {
       <TradeHistory />
     ) : path === "/scanner" ? (
       <ScannerPage />
+    ) : path === "/v7-audit" ? (
+      <V7AuditPage />
     ) : path === "/monitoring" ? (
       <MonitoringPage />
     ) : path === "/winning-rate" ? (
