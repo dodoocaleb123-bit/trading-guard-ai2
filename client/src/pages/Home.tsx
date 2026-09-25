@@ -2825,7 +2825,13 @@ function V7AuditPage() {
           const confirmations = Array.isArray(v7.confirmations) ? v7.confirmations : [];
           const qualified = row.verdict === "APPROVED" || v7.status === "QUALIFIED";
           const reason = row.decisionReason ?? v7.waitReason ?? "No additional reason recorded.";
-          const checks = [
+          const structuredAudit = Array.isArray(v7.ruleAudit) ? v7.ruleAudit : [];
+          const checks = structuredAudit.length ? structuredAudit.map((item: any) => ({
+            label: item.label,
+            pass: item.status === "PASS" ? true : item.status === "FAIL" ? false : null,
+            status: item.status,
+            detail: item.detail ?? (item.status === "PASS" ? "Rule passed." : item.status === "FAIL" ? "Rule failed." : item.status === "NOT_REACHED" ? "This rule was not reached because an earlier prerequisite failed." : item.status === "WAIT" ? "The channel remains in WAIT." : "This rule was not tested for this scan."),
+          })) : [
             { label: "Channel strategy result", pass: qualified, detail: qualified ? "The channel produced a qualified plan." : reason },
             { label: "Market-data freshness", pass: freshness.ok === true ? true : freshness.ok === false ? false : null, detail: freshness.ok === true ? "Quote and execution candle are fresh." : (freshness.reasons ?? []).join("; ") || "Freshness evidence was not included in this decision." },
             { label: "Directional structure", pass: v7.direction && v7.direction !== "NEUTRAL", detail: v7.direction ? `Direction: ${v7.direction}` : "No directional structure was confirmed." },
@@ -2842,7 +2848,7 @@ function V7AuditPage() {
               </div>
             </CardHeader>
             <CardContent className="grid gap-2 p-4 md:grid-cols-2">
-              {checks.map((check) => <div key={check.label} className="flex gap-3 rounded-xl border bg-background p-3"><div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold", check.pass === true ? "bg-emerald-100 text-emerald-700" : check.pass === false ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground")}>{check.pass === true ? "✓" : check.pass === false ? "!" : "–"}</div><div className="min-w-0"><p className="text-sm font-medium">{check.label}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{check.detail}</p></div></div>)}
+              {checks.map((check: any) => <div key={check.label} className="flex gap-3 rounded-xl border bg-background p-3"><div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold", check.pass === true ? "bg-emerald-100 text-emerald-700" : check.pass === false ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground")}>{check.pass === true ? "✓" : check.pass === false ? "!" : "–"}</div><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium">{check.label}</p>{check.status ? <Badge variant="outline" className="text-[10px]">{check.status}</Badge> : null}</div><p className="mt-1 text-xs leading-5 text-muted-foreground">{check.detail}</p></div></div>)}
             </CardContent>
           </Card>;
         })}

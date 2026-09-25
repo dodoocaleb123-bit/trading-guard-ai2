@@ -1,5 +1,5 @@
 import type { MarketSeries } from "./integrations";
-import type { V7Asset, V7ChannelResult, V7Freshness } from "./v7-intelligence";
+import type { V7Asset, V7ChannelResult, V7Freshness, V7RuleAudit } from "./v7-intelligence";
 
 type Candle = { time: number; open: number; high: number; low: number; close: number };
 type ChannelInput = {
@@ -115,8 +115,8 @@ function planFromEvidence(wanted: "BUY" | "SELL", execution: MarketSeries | null
   } satisfies V7ChannelResult["zones"][number]] : [];
   return { direction: wanted, entry: fmt(entry), stopLoss: fmt(stopLoss), takeProfit: fmt(takeProfit), confidence: Math.min(94, 70 + extraConfluence * 4), confluenceScore: Math.min(95, 58 + extraConfluence * 7), confirmations: [...confirmations, "meaningful liquidity sweep", "body-close BOS/CHoCH", "retracement into the new confirmation zone", `nearest opposing structural target`, `final RR ${fmt(reward / risk)}`], zones: zone, rationale };
 }
-function wait(input: ChannelInput, reasons: string[], confirmations: string[] = []): V7ChannelResult {
-  return { channel: `V7_${input.asset.slice(0, 3)}` as V7ChannelResult["channel"], asset: input.asset, timeframe: input.timeframe, status: "WAITING", direction: "NEUTRAL", entry: null, stopLoss: null, takeProfit: null, riskReward: null, confidence: 0, confluenceScore: 0, waitReason: reasons.join("; "), sourcePath: "CHANNEL_SIGNAL", ordinaryNewsPolicy: "ADDITIVE_ONLY", freshness: input.freshness, confirmations, zones: [], rationale: `WAIT: ${reasons.join("; ")}` };
+function wait(input: ChannelInput, reasons: string[], confirmations: string[] = [], ruleAudit?: V7RuleAudit[]): V7ChannelResult {
+  return { channel: `V7_${input.asset.slice(0, 3)}` as V7ChannelResult["channel"], asset: input.asset, timeframe: input.timeframe, status: "WAITING", direction: "NEUTRAL", entry: null, stopLoss: null, takeProfit: null, riskReward: null, confidence: 0, confluenceScore: 0, waitReason: reasons.join("; "), sourcePath: "CHANNEL_SIGNAL", ordinaryNewsPolicy: "ADDITIVE_ONLY", freshness: input.freshness, confirmations, zones: [], rationale: `WAIT: ${reasons.join("; ")}`, ruleAudit };
 }
 function qualified(input: ChannelInput, plan: Plan): V7ChannelResult {
   const riskReward = Number((Math.abs(plan.takeProfit - plan.entry) / Math.abs(plan.entry - plan.stopLoss)).toFixed(2));
@@ -145,15 +145,31 @@ function evaluateXau(input: ChannelInput): V7ChannelResult {
 function evaluateBtc(input: ChannelInput): V7ChannelResult {
   const reasons = baseChecks(input, [["1W", input.weekly], ["1D", input.daily], ["4H", input.h4], ["1H", input.h1], ["15M", input.m15]]);
   if (input.timeframe !== "15MIN") reasons.push("BTC/USD native signal timeframe is 15MIN; 5MIN may only refine an existing 15MIN setup");
-  if (reasons.length) return wait(input, reasons);
   const wanted = direction(input.m15);
-  if (!wanted || !htfAligned(input, wanted, true)) return wait(input, ["BTC 1W/1D/4H/1H context is not aligned"]);
-  const h1Evidence = sweepBosRetracement(input.h1, wanted);
-  if (!h1Evidence.bos) return wait(input, ["BTC 1H activation level has not broken"]);
-  if (!location(input.m15, wanted, 0.25)) return wait(input, [wanted === "BUY" ? "BTC price is not in the preferred 0–25% discount zone" : "BTC price is not in the preferred 75–100% premium zone"]);
-  const evidence = sweepBosRetracement(input.m15, wanted);
+  const weeklyBias = wanted ? direction(input.weekly) === wanted : null;
+  const dailyBias = wanted ? direction(input.daily) === wanted : null;
+  const h4Location = wanted ? location(input.h4, wanted, 0.5) : null;
+  const emptyEvidence: StructuralEvidence = { sweep: false, bos: false, retracement: false, extreme: null, level: null, zoneLow: null, zoneHigh: null };
+  const h1Evidence = wanted ? sweepBosRetracement(input.h1, wanted) : emptyEvidence;
+  const evidence = wanted ? sweepBosRetracement(input.m15, wanted) : emptyEvidence;
+  const premiumDiscount = wanted ? location(input.m15, wanted, 0.25) : null;
+  const audit = (rr: V7RuleAudit[]): V7RuleAudit[] => rr;
+  const baseAudit = audit([
+    { label: "1W bias", status: weeklyBias == null ? "NOT_TESTED" : weeklyBias ? "PASS" : "FAIL" },
+    { label: "1D bias", status: dailyBias == null ? "NOT_TESTED" : dailyBias ? "PASS" : "FAIL" },
+    { label: "4H location", status: h4Location == null ? "NOT_TESTED" : h4Location ? "PASS" : "FAIL" },
+    { label: "1H activation", status: h1Evidence.bos ? "PASS" : "FAIL" },
+    { label: "15M BOS", status: evidence.bos ? "PASS" : "FAIL" },
+    { label: "15M retracement", status: evidence.bos ? (evidence.retracement ? "PASS" : "FAIL") : "NOT_REACHED" },
+    { label: "Premium/discount", status: premiumDiscount == null ? "NOT_TESTED" : premiumDiscount ? "PASS" : "FAIL" },
+  ]);
+  if (reasons.length) return wait(input, reasons, [], baseAudit.concat({ label: "Minimum RR 1:2", status: "NOT_TESTED" }, { label: "Final decision", status: "NOT_REACHED" }));
+  if (!wanted || !htfAligned(input, wanted, true)) return wait(input, ["BTC 1W/1D/4H/1H context is not aligned"], [], baseAudit.concat({ label: "Minimum RR 1:2", status: "NOT_TESTED" }, { label: "Final decision", status: "NOT_REACHED" }));
+  if (!h1Evidence.bos) return wait(input, ["BTC 1H activation level has not broken"], [], baseAudit.concat({ label: "Minimum RR 1:2", status: "NOT_TESTED" }, { label: "Final decision", status: "NOT_REACHED" }));
+  if (!premiumDiscount) return wait(input, [wanted === "BUY" ? "BTC price is not in the preferred 0–25% discount zone" : "BTC price is not in the preferred 75–100% premium zone"], [], baseAudit.concat({ label: "Minimum RR 1:2", status: "NOT_TESTED" }, { label: "Final decision", status: "NOT_REACHED" }));
   const plan = planFromEvidence(wanted, input.m15, input.m15, evidence, 0.15, ["BTC 1H activation", "15M native structural break", "preferred premium/discount location", "5M refinement is optional"], "BTC/USD channel: 1W/1D/4H context → 1H activation → meaningful location → 15M BOS/CHoCH → pullback/retest → structural target. BTC is news-data-free.");
-  return plan ? qualified(input, plan) : wait(input, ["BTC 15M sweep, BOS, retracement, structural target, or realistic 1:2 target is incomplete"]);
+  if (!plan) return wait(input, ["BTC 15M sweep, BOS, retracement, structural target, or realistic 1:2 target is incomplete"], [], baseAudit.concat({ label: "Minimum RR 1:2", status: "FAIL" }, { label: "Final decision", status: "WAIT" }));
+  return { ...qualified(input, plan), ruleAudit: baseAudit.concat({ label: "Minimum RR 1:2", status: plan ? "PASS" : "FAIL" }, { label: "Final decision", status: "PASS" }) };
 }
 function evaluateEur(input: ChannelInput): V7ChannelResult {
   const reasons = baseChecks(input, [["1W", input.weekly], ["1D", input.daily], ["4H", input.h4], ["1H", input.h1], ["15M", input.m15]]);

@@ -648,7 +648,7 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
     }
     const strongIndicatorCount = countStrongSetupIndicators(observation.supportingComponents);
     const indicatorBucket = strongIndicatorCount === 1 ? "ONE_STRONG" : strongIndicatorCount >= 2 ? "TWO_PLUS" : "NONE";
-    const locatorMarket = { ...market, entryLocator: { status: locatorState.status, ready: executableLocatorEmission, reason: gated.entryLocatorReason, snapshotCount: locatorState.snapshotCount, fingerprint: observation.fingerprint, strongIndicatorCount, indicatorBucket } };
+    const locatorMarket = { ...market, v7: (market as any).v7 ? { ...(market as any).v7, ruleAudit: (market as any).v7.ruleAudit ?? [] } : undefined, entryLocator: { status: locatorState.status, ready: executableLocatorEmission, reason: gated.entryLocatorReason, snapshotCount: locatorState.snapshotCount, fingerprint: observation.fingerprint, strongIndicatorCount, indicatorBucket } };
     const decisionVerdict = executableLocatorEmission ? gated.verdict : "SKIPPED" as const;
     const executableDecision = decisionVerdict === "APPROVED";
     await createStrategyDecision({

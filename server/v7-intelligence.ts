@@ -13,6 +13,8 @@ export const V7_ASSETS = ["XAU/USD", "BTC/USD", "EUR/USD", "GBP/USD"] as const;
 export type V7Asset = (typeof V7_ASSETS)[number];
 export type V7Direction = "BUY" | "SELL";
 export type V7ChannelStatus = "QUALIFIED" | "WAITING";
+export type V7RuleStatus = "PASS" | "FAIL" | "NOT_REACHED" | "NOT_TESTED" | "WAIT";
+export type V7RuleAudit = { label: string; status: V7RuleStatus; detail?: string };
 
 export type V7LiveQuote = {
   asset: string;
@@ -51,6 +53,7 @@ export type V7ChannelResult = {
   confirmations: string[];
   zones: WorkflowZone[];
   rationale: string;
+  ruleAudit?: V7RuleAudit[];
 };
 
 const HARD_QUOTE_AGE_MS = 15_000;
