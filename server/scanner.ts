@@ -313,7 +313,7 @@ export function buildContextOnlyState(input: { asset: string; timeframe: "1H" | 
     lastConfluence: null,
     evidenceJson: JSON.stringify({ kind: "V5_CONTEXT_REFRESH", zoneEvidence }),
     conflictJson: "[]",
-    stateJson: JSON.stringify({ contextOnly: true, ...zoneEvidence, waitReason: `${input.timeframe} context refreshed for the v5 hierarchy; this timeframe is not eligible for signal emission.` }),
+    stateJson: JSON.stringify({ contextOnly: true, ...zoneEvidence, waitReason: `${input.timeframe} context refreshed for the V7 channel map; this timeframe is not eligible for signal emission.` }),
     lastEmittedAt: input.previousLastEmittedAt ?? null,
   };
 }
@@ -472,9 +472,6 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
   const createdSignalIds = new Set<number>();
   const mirroredRules = await fetchStrategyRulesFromSupabase();
   const mirroredText = buildBoundedRuleText(mirroredRules, 6_000);
-  await ensureReplacementIntelligenceVersion(userId);
-  const replacementModel = buildReplacementKnowledgeModelV5();
-  const replacementBaselineModel = buildReplacementKnowledgeModelV3();
   const acceptedLessons = await listAcceptedStrategyLessons(userId);
   const candidates = WATCHLIST.flatMap((asset) => TIMEFRAMES.map((timeframe) => ({ asset, timeframe, series: seriesCache.get(`${asset}:${timeframe}`) })) ).filter((candidate): candidate is { asset: typeof WATCHLIST[number]; timeframe: typeof TIMEFRAMES[number]; series: MarketSeries } => Boolean(candidate.series)).map((candidate) => ({ ...candidate, cooldownKey: `${candidate.asset}:${candidate.timeframe}:PENDING` }));
   console.info(`[Scanner] Forwarding ${candidates.length} raw market snapshots to the strategy-rules algorithm.`);
@@ -592,45 +589,40 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
     };
     // The helper keeps its legacy call shape for deployed clients; db.ts
     // expands this lookup to include the v7 identity during direct replacement.
-    const hasOpenSignal = await hasOpenGeneratedSignal(userId, asset, timeframe, replacementModel.id, ENTRY_LOCATOR_V5_GENERATION_MODE);
+    const hasOpenSignal = await hasOpenGeneratedSignal(userId, asset, timeframe, V7_INTELLIGENCE_VERSION, V7_GENERATION_MODE);
     const storedLocator = await getEntryLocatorState(userId, asset, timeframe);
     let previousLocator: Record<string, unknown> | null = null;
     try { previousLocator = storedLocator?.stateJson ? JSON.parse(storedLocator.stateJson) : null; } catch { previousLocator = null; }
     const locatorResult = advanceEntryLocator({ previous: previousLocator, observation, hasOpenSignal });
-    const paperSignalQualityApproved = hasMinimumPaperSignalQuality(gated.confidence, gated.confluenceScore);
-    const paperSignalQualityReason = describePaperSignalQuality(gated.confidence, gated.confluenceScore);
-    const locatorReadyForEmission = locatorResult.ready && paperSignalQualityApproved;
-    const v5LevelsComplete = gated.direction != null && gated.entry != null && gated.stopLoss != null && gated.takeProfit != null;
-    const v5GeometryValid = Boolean((market.replacementIntelligence as any)?.workflow?.geometryValid);
-    const v5GeometryReason = (market.replacementIntelligence as any)?.workflow?.geometryReason as string | undefined;
-    const strategyApproved = shouldNotifyScannerSignal(gated.verdict);
-    const executableLocatorEmission = canEmitV5Locator({ locatorReady: locatorReadyForEmission, strategyApproved, levelsComplete: v5LevelsComplete, geometryValid: v5GeometryValid });
+    const v7Result = (market as any).v7;
+    const v7LevelsComplete = gated.direction != null && gated.entry != null && gated.stopLoss != null && gated.takeProfit != null;
+    const v7RiskReward = Number(v7Result?.riskReward ?? gated.riskReward ?? 0);
+    const v7ChannelQualified = v7Result?.status === "QUALIFIED" && gated.verdict === "APPROVED" && v7LevelsComplete && v7RiskReward >= 2;
+    // V7 is the sole live qualification authority. The persisted Entry Locator
+    // state remains historical/audit data only and cannot block Telegram.
+    const locatorReadyForEmission = v7ChannelQualified;
+    const strategyApproved = v7ChannelQualified;
+    const executableLocatorEmission = v7ChannelQualified;
     gated.entryLocatorReady = executableLocatorEmission;
-    gated.entryLocatorReason = !paperSignalQualityApproved && locatorResult.ready
-      ? `Entry Locator blocked emission: ${paperSignalQualityReason}`
-      : !strategyApproved
-        ? `Entry Locator is not emitted because the v5 hierarchy judgment is ${gated.verdict}; waiting for a qualified structural plan.`
-        : !v5LevelsComplete
-          ? "Entry Locator is not emitted because the v5 plan does not contain complete executable levels."
-          : !v5GeometryValid
-            ? `Entry Locator is not emitted because v5 geometry is invalid: ${v5GeometryReason ?? "the structural stop/target bounds failed."}`
+    gated.entryLocatorReason = !strategyApproved
+        ? `V7 channel is waiting: ${v7Result?.waitReason ?? gated.verdict}`
+        : !v7LevelsComplete
+          ? "V7 channel did not produce complete executable levels."
+          : v7RiskReward < 2
+            ? "V7 channel rejected the setup because the hard minimum RR is 1:2."
             : locatorResult.reason;
     const activeSignal = activeCurrentSignals.find((signal) => signal.asset === asset && signal.timeframe === timeframe);
     const upgradeLocatorResult = activeSignal
       ? advanceEntryLocator({ previous: previousLocator ? { ...previousLocator, status: "WAITING" } : null, observation, hasOpenSignal: false })
       : null;
-    const v5HierarchyApproved = gated.verdict === "APPROVED" && Boolean((market.replacementIntelligence as any)?.workflow?.eligible);
-    gated.contradictionLocatorReady = activeSignal ? Boolean(v5HierarchyApproved && upgradeLocatorResult?.ready && paperSignalQualityApproved) : locatorReadyForEmission;
+    const v7HierarchyApproved = v7ChannelQualified;
+    gated.contradictionLocatorReady = activeSignal ? Boolean(v7HierarchyApproved) : locatorReadyForEmission;
     gated.contradictionLocatorReason = activeSignal
-      ? !v5HierarchyApproved
-        ? `Contradiction monitor blocked before Entry Locator thresholds: v5 hierarchy judgment is ${gated.verdict}.`
-        : paperSignalQualityApproved
-          ? upgradeLocatorResult?.reason ?? locatorResult.reason
-          : `Contradiction monitor blocked after v5 approval: ${paperSignalQualityReason}`
+        ? !v7HierarchyApproved
+        ? `Contradiction monitor waiting: V7 channel status is ${gated.verdict}.`
+        : upgradeLocatorResult?.reason ?? locatorResult.reason
       : gated.entryLocatorReason;
-    const qualitySafeLocatorState = !paperSignalQualityApproved && locatorResult.ready
-      ? { ...locatorResult.state, status: "WAITING" as const, waitReason: `Entry Locator blocked emission: ${paperSignalQualityReason}` }
-      : !strategyApproved || !v5LevelsComplete
+    const qualitySafeLocatorState = !strategyApproved || !v7LevelsComplete
         ? { ...locatorResult.state, status: "WAITING" as const, waitReason: gated.entryLocatorReason }
         : locatorResult.state;
     const locatorState = executableLocatorEmission ? markEntryLocatorEmitted(qualitySafeLocatorState, observation.fingerprint) : qualitySafeLocatorState;
@@ -671,7 +663,7 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
     try { await deliverV7NewsObservations(userId, asset, (market as any).v7News ?? []); } catch (error) { console.warn(`[Scanner] v7 news notification failed for ${asset}:`, error instanceof Error ? error.message : error); }
     try {
       if (!executableLocatorEmission) {
-        console.info(`[Scanner] ${asset} ${timeframe} v5 Locator not ready; no signal emitted: ${gated.entryLocatorReason}`);
+        console.info(`[Scanner] ${asset} ${timeframe} V7 channel not qualified; no signal emitted: ${gated.entryLocatorReason}`);
         continue;
       }
       const selectedRiskReward = Number(gated.riskReward ?? gated.decisionTrace?.levelDerivation?.selectedRiskReward ?? 0);
@@ -768,7 +760,7 @@ async function monitorOpenSignalContradictions(userId: number, decisions: Array<
       if (!canAdvanceReplacementChain(replacementRoot?.status)) continue;
       // Hierarchy judgment is the first gate. Do not inspect contradiction
       // confidence/confluence or Entry Locator replacement readiness until the
-      // opposite candidate itself is an approved v5 structural plan.
+      // opposite candidate itself is an approved V7 structural plan.
       if (decision?.verdict !== "APPROVED" || !decision?.direction || !market?.close) continue;
       const contradiction = detectPaperTradeContradiction(signal, Number(market.close), decision);
       if (!contradiction) continue;
@@ -785,7 +777,7 @@ async function monitorOpenSignalContradictions(userId: number, decisions: Array<
       let action: "REVIEW_DIRECTION" | "TIGHTEN_STOP" | "EXIT_PAPER_SETUP" | "UPGRADE_PAPER_SETUP" = contradiction.action;
       let reason = contradiction.reason;
       if (replacementReady) {
-        const replacementSignalInput = { userId, asset: signal.asset, timeframe: signal.timeframe, direction: contradiction.observedDirection as "BUY" | "SELL", entry: String(decision.entry), stopLoss: String(decision.stopLoss), takeProfit: String(decision.takeProfit), riskReward: selectedRiskReward.toFixed(2), confidence: String(decision.confidence), confluenceScore: String(decision.confluenceScore), intelligenceVersion: "forex-trading-combined-document-v5", generationMode: ENTRY_LOCATOR_V5_GENERATION_MODE, signalFingerprint: buildAtomicSignalFingerprint({ userId, asset: signal.asset, timeframe: signal.timeframe, direction: contradiction.observedDirection as "BUY" | "SELL", entry: String(decision.entry), stopLoss: String(decision.stopLoss), takeProfit: String(decision.takeProfit), riskReward: selectedRiskReward.toFixed(2), confidence: String(decision.confidence), confluenceScore: String(decision.confluenceScore) }) };
+        const replacementSignalInput = { userId, asset: signal.asset, timeframe: signal.timeframe, direction: contradiction.observedDirection as "BUY" | "SELL", entry: String(decision.entry), stopLoss: String(decision.stopLoss), takeProfit: String(decision.takeProfit), riskReward: selectedRiskReward.toFixed(2), confidence: String(decision.confidence), confluenceScore: String(decision.confluenceScore), intelligenceVersion: V7_INTELLIGENCE_VERSION, generationMode: V7_GENERATION_MODE, signalFingerprint: buildAtomicSignalFingerprint({ userId, asset: signal.asset, timeframe: signal.timeframe, direction: contradiction.observedDirection as "BUY" | "SELL", entry: String(decision.entry), stopLoss: String(decision.stopLoss), takeProfit: String(decision.takeProfit), riskReward: selectedRiskReward.toFixed(2), confidence: String(decision.confidence), confluenceScore: String(decision.confluenceScore) }) };
         if (await hasExactGeneratedSignal(replacementSignalInput)) {
           console.info(`[Adjustment] ${signal.asset} ${signal.timeframe} exact replacement already exists (${buildExactSignalFingerprint(replacementSignalInput)}); duplicate signal suppressed.`);
           continue;
@@ -793,7 +785,7 @@ async function monitorOpenSignalContradictions(userId: number, decisions: Array<
         const [replacementResult] = await db.insert(generatedSignals).values({ ...replacementSignalInput, rationale: formatAuditResult(decision, market), intelligenceComponents: JSON.stringify(decision.decisionTrace?.supportingComponents ?? decision.ruleEvidence ?? []), marketRegime: decision.marketRegime ?? market.replacementMarketRegime ?? null, status: "PENDING" });
         replacementSignalId = Number(replacementResult.insertId);
         action = "UPGRADE_PAPER_SETUP";
-        reason = `A contradictory ${contradiction.observedDirection} setup passed the Entry Locator with exact 1:${selectedRiskReward} geometry. The original ${signal.direction} paper setup is preserved for audit history and superseded by replacement signal #${replacementSignalId}.`;
+        reason = `A contradictory ${contradiction.observedDirection} setup passed the V7 channel with exact 1:${selectedRiskReward} geometry. The original ${signal.direction} paper setup is preserved for audit history and superseded by replacement signal #${replacementSignalId}.`;
         await supersedeGeneratedSignal(signal.id, replacementSignalId, reason);
         await mirrorToSupabase("generated_signals", { user_id: userId, signal_id: replacementSignalId, asset: signal.asset, timeframe: signal.timeframe, direction: contradiction.observedDirection, entry: decision.entry, stopLoss: decision.stopLoss, takeProfit: decision.takeProfit, riskReward: selectedRiskReward, confidence: decision.confidence, confluence_score: decision.confluenceScore, status: "PENDING", rationale: formatAuditResult(decision, market) });
         message = formatApprovedTelegramMessage({ asset: signal.asset, timeframe: signal.timeframe, direction: contradiction.observedDirection, entry: decision.entry, stopLoss: decision.stopLoss, takeProfit: decision.takeProfit, confidence: decision.confidence, riskReward: selectedRiskReward, adjustments: reason, ruleEvidence: decision.ruleEvidence, confluenceScore: decision.confluenceScore, decisionTrace: decision.decisionTrace, fundamentalContext: market.fundamentalContext });

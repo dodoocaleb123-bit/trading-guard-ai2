@@ -251,9 +251,9 @@ describe("scanner paper routing with shared quality gate", () => {
     expect(createStrategyDecision).toHaveBeenCalledWith(expect.objectContaining({ verdict: expect.stringMatching(/APPROVED|SKIPPED/) }));
   });
 
-  it("ignores legacy v5 rows but suppresses overlapping current locator setups", async () => {
+  it("uses the V7 identity and suppresses overlapping current setups", async () => {
     fetchMarketSeriesBatch.mockResolvedValue(allSeries());
-    hasOpenGeneratedSignal.mockImplementation(async (_userId: number, _asset: string, _timeframe: string, _version: string, generationMode?: string) => generationMode === "ENTRY_LOCATOR_V5");
+    hasOpenGeneratedSignal.mockImplementation(async (_userId: number, _asset: string, _timeframe: string, _version: string, generationMode?: string) => generationMode === "V7_INTELLIGENCE");
     sendTelegramMessage.mockClear();
     insert.mockClear();
 
@@ -261,10 +261,10 @@ describe("scanner paper routing with shared quality gate", () => {
 
     expect(result.created).toBe(0);
     expect(hasOpenGeneratedSignal).toHaveBeenCalledTimes(8);
-    expect(hasOpenGeneratedSignal).toHaveBeenNthCalledWith(1, 1, expect.any(String), expect.any(String), "forex-trading-combined-document-v5", "ENTRY_LOCATOR_V5");
-    expect(hasOpenGeneratedSignal).toHaveBeenNthCalledWith(8, 1, expect.any(String), expect.any(String), "forex-trading-combined-document-v5", "ENTRY_LOCATOR_V5");
+    expect(hasOpenGeneratedSignal).toHaveBeenNthCalledWith(1, 1, expect.any(String), expect.any(String), "v7-intelligence", "V7_INTELLIGENCE");
+    expect(hasOpenGeneratedSignal).toHaveBeenNthCalledWith(8, 1, expect.any(String), expect.any(String), "v7-intelligence", "V7_INTELLIGENCE");
     expect(sendTelegramMessage).not.toHaveBeenCalled();
-    expect(hasOpenGeneratedSignal.mock.calls.every((call: unknown[]) => call[4] === "ENTRY_LOCATOR_V5")).toBe(true);
+    expect(hasOpenGeneratedSignal.mock.calls.every((call: unknown[]) => call[4] === "V7_INTELLIGENCE")).toBe(true);
     hasOpenGeneratedSignal.mockResolvedValue(false);
   });
 

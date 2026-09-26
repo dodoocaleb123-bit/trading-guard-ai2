@@ -367,7 +367,7 @@ function ReplacementStatsCard() {
               ))}
               {!stats.data?.confidenceBands?.length && (
                 <p className="text-xs text-muted-foreground">
-                  Calibration begins with hierarchical-workflow outcomes.
+                  Calibration begins with V7 channel outcomes.
                 </p>
               )}
             </div>
@@ -400,7 +400,7 @@ function V5MonitoringCard() {
     <Card className="mt-6">
       <CardHeader>
         <CardTitle className="font-display text-xl">
-          Active hierarchical outcome monitor
+          V7 channel outcome monitor
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           Resolved paper outcomes grouped by the active model’s asset,
@@ -766,13 +766,11 @@ function EntryLocatorCard() {
     <Card className="mt-6">
       <CardHeader>
         <CardTitle className="font-display text-xl">
-          v7 hierarchy execution states
+          V7 channel execution states
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           v7 evaluates each scanner snapshot through 4H bias → 1H context →
-          independent 15M and 5M execution. Entry Locator is the final
-          execution-readiness gate; these states show whether v7 has a
-          qualified plan ready to emit.
+          independent 15M and 5M execution. The V7 channel result is the execution-readiness decision; these states show whether a qualified plan is ready to emit.
         </p>
         {latestScannerAttempt ? (
           <p className="mt-2 text-xs text-muted-foreground">
@@ -1597,7 +1595,7 @@ function V5SourcePerformanceCard() {
               v7 source performance
             </CardTitle>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Review v7 paper signals created by the Entry Locator after the
+              Review v7 paper signals created by the V7 signal gate after the
               hierarchy and quality gates pass. Refreshes every minute.
             </p>
           </div>
@@ -1646,7 +1644,7 @@ function V5SourcePerformanceCard() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-medium">
-                      "Entry Locator"
+                      "V7 signal gate"
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       "v7 structural execution gate"
@@ -1742,7 +1740,7 @@ function AdaptiveRatioPerformanceCard() {
               v7 adaptive ratio performance
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
-              Authoritative Entry Locator v7 paper outcomes grouped by selected
+              Authoritative V7 signal gate v7 paper outcomes grouped by selected
               risk/reward ratio. Active v7 selection is limited to 1:3 and 1:2;
               historical 1:1 and 1:1.5 records remain visible for audit.
               Refreshes every minute.
@@ -2071,7 +2069,7 @@ function TradeHistory() {
                         }
                       >
                         {s.generationMode === "V7_ENTRY_LOCATOR"
-                          ? "v7 · Entry Locator"
+                          ? "v7 · V7 signal gate"
                           : s.intelligenceVersion?.includes("v7")
                             ? "v7 · Historical snapshot"
                             : intelligenceVersionLabel(s.intelligenceVersion ?? "")}
@@ -2251,7 +2249,7 @@ function AdaptiveGeometryDiagnostics() {
             </CardTitle>
             <p className="mt-1 text-xs text-muted-foreground">
               Breakout confirmation and next opposing-zone evidence retained for
-              the hierarchical Entry Locator.
+              the hierarchical V7 signal gate.
             </p>
           </div>
           <Badge
@@ -2437,7 +2435,7 @@ function ScannerCadenceDiagnostics() {
                 </p>
                 <p className="mt-1 text-xs leading-5">
                   This cycle could not supply market data, so v7 did not
-                  evaluate setups and no v7 Entry Locator signal
+                  evaluate setups and no v7 V7 signal gate signal
                   was created. Unavailable provider cycles in the last 24 hours:{" "}
                   {data.providerUnavailableCycles ?? 0}.{" "}
                   {data.latestProviderIssue.severity === "TRANSIENT"
@@ -2510,7 +2508,7 @@ function ScannerCadenceDiagnostics() {
               <div className="overflow-hidden rounded-xl border bg-background">
                 <div className="border-b bg-muted/25 px-3 py-2.5">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Production health timeline</p>
-                  <p className="mt-1 text-[11px] leading-4 text-muted-foreground">Recent scheduler cycles at a glance. Telegram is only attempted after v7 qualifies and the Entry Locator emits a signal.</p>
+                  <p className="mt-1 text-[11px] leading-4 text-muted-foreground">Recent scheduler cycles at a glance. Telegram is only attempted after v7 qualifies and the V7 signal gate emits a signal.</p>
                 </div>
                 <div className="divide-y">
                   {data.runs.slice(0, 8).map(run => {
@@ -2729,7 +2727,7 @@ function ReplacementChainMonitoringCard() {
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <div className="rounded-xl border bg-background p-3 text-xs leading-5 text-muted-foreground">
             <p className="font-semibold uppercase tracking-[0.14em] text-foreground">Chain rule</p>
-            <p className="mt-1">A later opposite setup can reply to the previous replacement only after the original parent is closed and the candidate passes v7 hierarchy approval followed by Entry Locator gates.</p>
+            <p className="mt-1">A later opposite setup can reply to the previous replacement only after the original parent is closed and the candidate passes v7 hierarchy approval followed by V7 signal gate gates.</p>
           </div>
           <div className="rounded-xl border bg-background p-3 text-xs leading-5 text-muted-foreground">
             <p className="font-semibold uppercase tracking-[0.14em] text-foreground">Exact identity</p>
@@ -2875,7 +2873,7 @@ function MonitoringPage() {
       <div className="mb-6 grid gap-3 md:grid-cols-3">
         <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">What this watches</p><p className="mt-2 text-sm leading-6">Scheduler callbacks, five-minute freshness, provider availability, and complete hierarchy payloads.</p></CardContent></Card>
         <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Decision boundary</p><p className="mt-2 text-sm leading-6">Each v7 asset channel owns its strategy; shared safety and delivery gates remain common.</p></CardContent></Card>
-        <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Delivery boundary</p><p className="mt-2 text-sm leading-6">Telegram is attempted only after a qualified v7 channel plan and Entry Locator emission.</p></CardContent></Card>
+        <Card className="border-primary/15 bg-primary/[0.025]"><CardContent className="p-4"><p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Delivery boundary</p><p className="mt-2 text-sm leading-6">Telegram is attempted only after a qualified v7 channel plan and V7 signal gate emission.</p></CardContent></Card>
       </div>
       <CallbackStatusCard />
       <ScannerCadenceDiagnostics />
@@ -3694,11 +3692,11 @@ function WinningRateVersionCard({
 }) {
   const label =
     version.version === "replacement-forex-v1"
-      ? "Replacement Intelligence v1"
+      ? "V7 channel analysis v1"
       : version.version === "forex-trading-combined-document-v2"
-        ? "Replacement Intelligence v2"
+        ? "V7 channel analysis v2"
         : version.version === "forex-trading-combined-document-v3"
-          ? "Replacement Intelligence v3"
+          ? "V7 channel analysis v3"
           : "V7 Intelligence";
   return (
     <div className="space-y-5">
@@ -3820,7 +3818,7 @@ function V2V3Comparison({ versions }: { versions: WinningRateVersionView[] }) {
       <CardContent className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Replacement Intelligence v2
+            V7 channel analysis v2
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <SummaryStat
@@ -3842,7 +3840,7 @@ function V2V3Comparison({ versions }: { versions: WinningRateVersionView[] }) {
         </div>
         <div className="rounded-xl border border-primary/20 bg-primary/[0.035] p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-            Replacement Intelligence v3
+            V7 channel analysis v3
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <SummaryStat
@@ -3921,11 +3919,11 @@ function TimingMetricCells({
 }
 function intelligenceVersionLabel(version: string) {
   return version === "replacement-forex-v1"
-    ? "Replacement Intelligence v1"
+    ? "V7 channel analysis v1"
     : version === "forex-trading-combined-document-v2"
-      ? "Replacement Intelligence v2"
+      ? "V7 channel analysis v2"
       : version === "forex-trading-combined-document-v3"
-        ? "Replacement Intelligence v3"
+        ? "V7 channel analysis v3"
         : "V7 Intelligence";
 }
 function LocatorOutcomeReviewCard() {
@@ -3940,7 +3938,7 @@ function LocatorOutcomeReviewCard() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <CardTitle className="font-display text-lg">
-              Current V7 Entry Locator review
+              Current V7 V7 signal gate review
             </CardTitle>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
               Outcome evidence scoped only to signals emitted after the stateful
@@ -4156,7 +4154,7 @@ function WinningRatePage() {
       <PageHeading
         eyebrow="Performance ledger"
         title="Winning rate"
-        description="Historical paper-signal outcomes separated by Replacement Intelligence version, asset, timeframe, and confidence band."
+        description="Historical paper-signal outcomes separated by V7 channel analysis version, asset, timeframe, and confidence band."
       />
       <WinningRateTelemetry
         stats={stats.data}
