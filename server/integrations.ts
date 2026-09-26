@@ -72,6 +72,7 @@ export async function mirrorToSupabase(table: string, payload: Record<string, un
 
 export async function fetchStrategyRulesFromSupabase() {
   if (!ENV.supabaseUrl || !ENV.supabaseAnonKey) return [];
+  if (missingSupabaseMirrorTables.has("strategy_rules")) return [];
   try {
     const response = await axios.get(`${ENV.supabaseUrl}/strategy_rules`, {
       headers: supabaseHeaders(),
@@ -80,6 +81,12 @@ export async function fetchStrategyRulesFromSupabase() {
     });
     return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    if (status === 404) {
+      missingSupabaseMirrorTables.add("strategy_rules");
+      console.info("[Supabase] Optional strategy_rules table is unavailable; using the application strategy source.");
+      return [];
+    }
     console.warn("[Supabase] Could not load strategy rules:", error instanceof Error ? error.message : error);
     return [];
   }
