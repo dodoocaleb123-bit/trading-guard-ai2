@@ -26,10 +26,10 @@ describe("v7 independent channels", () => {
     const result = evaluateV7AssetChannel({ ...input, m5: null });
     expect(result.waitReason).not.toContain("5M data unavailable");
   });
-  it("keeps ordinary XAU decisions dependent on XAG confirmation", () => {
-    const result = evaluateV7AssetChannel({ ...common("XAU/USD", "5MIN"), xagDirection: "SELL", xagFresh: true });
+  it("does not require XAG/USD confirmation for ordinary XAU decisions", () => {
+    const result = evaluateV7AssetChannel(common("XAU/USD", "5MIN"));
     expect(result.status).toBe("WAITING");
-    expect(result.waitReason).toContain("XAG/USD direction");
+    expect(result.waitReason).not.toContain("XAG/USD");
   });
   it("requires EUR native 15M execution", () => {
     const result = evaluateV7AssetChannel(common("EUR/USD", "5MIN"));

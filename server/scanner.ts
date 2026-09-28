@@ -12,7 +12,7 @@ import { reconcileZoneMemory, toWorkflowZone, type PersistedZoneMemory } from ".
 import { describePaperSignalQuality, hasMinimumPaperSignalQuality } from "./paper-signal-quality";
 import { detectPaperTradeContradiction } from "./paper-trade-adjustments";
 import { buildUpgradePaperAdjustmentReason, buildUpgradeTelegramDedupeKey, compareStrongerSameDirectionSetup } from "./paper-trade-upgrades";
-import { fetchEodhdXagConfirmation, fetchEodhdXagQuote, fetchMarketSeries, fetchMarketSeriesBatch, fetchMarketSnapshot, fetchStrategyRulesFromSupabase, forensicAnalysis, formatApprovedTelegramMessage, formatOutcomeTelegramMessage, formatPaperTradeAdjustmentTelegramMessage, formatPaperTradeContradictionWarningTelegramMessage, formatPaperTradeUpgradeTelegramMessage, formatAuditResult, generateScannerDecisions, mirrorToSupabase, normalizeForensicFinding, sendTelegramMessage, type MarketSeries, type MarketSnapshot } from "./integrations";
+import { fetchMarketSeries, fetchMarketSeriesBatch, fetchMarketSnapshot, fetchStrategyRulesFromSupabase, forensicAnalysis, formatApprovedTelegramMessage, formatOutcomeTelegramMessage, formatPaperTradeAdjustmentTelegramMessage, formatPaperTradeContradictionWarningTelegramMessage, formatPaperTradeUpgradeTelegramMessage, formatAuditResult, generateScannerDecisions, mirrorToSupabase, normalizeForensicFinding, sendTelegramMessage, type MarketSeries, type MarketSnapshot } from "./integrations";
 import { notifyOwner } from "./_core/notification";
 import { buildV7ChannelResult, calculateV7Freshness, V7_GENERATION_MODE, V7_INTELLIGENCE_VERSION, V7_NEWS_EVENT_GENERATION_MODE, isWithinV7Session, type V7LiveQuote } from "./v7-intelligence";
 import { buildV7NewsObservations } from "./v7-news";
@@ -192,7 +192,7 @@ export const MAX_OUTCOME_TRACKS_PER_RUN = 32;
 export const MAX_FAILED_OUTCOME_RETRIES_PER_RUN = 2;
 
 type ScanUserResult = { created: number; tracked: number; adjustments: number; marketData: ScanMarketDataStatus; marketDataError?: string | null };
-type SharedMarketData = { series5m: Map<string, MarketSeries>; series15m: Map<string, MarketSeries>; series1h: Map<string, MarketSeries>; series4h: Map<string, MarketSeries>; series1d: Map<string, MarketSeries>; series1w: Map<string, MarketSeries>; quotes: Map<string, V7LiveQuote>; xagQuote?: V7LiveQuote | null; xagDirection?: "BUY" | "SELL" | null; xagFresh: boolean };
+type SharedMarketData = { series5m: Map<string, MarketSeries>; series15m: Map<string, MarketSeries>; series1h: Map<string, MarketSeries>; series4h: Map<string, MarketSeries>; series1d: Map<string, MarketSeries>; series1w: Map<string, MarketSeries>; quotes: Map<string, V7LiveQuote> };
 type ScanUserInput = { marketData?: SharedMarketData; marketDataError?: string | null };
 
 async function fetchGroupedMarketSeriesBatch(interval: "5min" | "15min" | "1h" | "4h" | "1day" | "1week") {
@@ -230,24 +230,8 @@ async function fetchSharedMarketData(): Promise<SharedMarketData> {
       quotes.set(WATCHLIST[index], { asset: WATCHLIST[index], price: quote.price, bid: quote.bid ?? null, ask: quote.ask ?? null, spread: quote.spread ?? null, fetchedAt: quote.fetchedAt, providerTimestamp: quote.providerTimestamp ?? null });
     } else if (result.status === "rejected") console.warn(`[Scanner] v7 quote unavailable for ${WATCHLIST[index]}:`, result.reason instanceof Error ? result.reason.message : result.reason);
   });
-  let xagQuote: V7LiveQuote | null = null;
-  try {
-    const quote = await fetchEodhdXagQuote();
-    xagQuote = { asset: "XAG/USD", price: quote.price, bid: quote.bid, ask: quote.ask, spread: quote.spread, fetchedAt: quote.fetchedAt, providerTimestamp: quote.providerTimestamp };
-  } catch (error) {
-    console.warn(`[Scanner] v7 XAG quote unavailable:`, error instanceof Error ? error.message : error);
-  }
-  let xagDirection: "BUY" | "SELL" | null = null;
-  let xagFresh = false;
-  try {
-    const confirmation = await fetchEodhdXagConfirmation();
-    xagDirection = confirmation.direction;
-    xagFresh = confirmation.ageMs <= 30_000;
-  } catch (error) {
-    console.warn(`[Scanner] v7 XAG confirmation unavailable:`, error instanceof Error ? error.message : error);
-  }
-  console.info(`[Scanner] Shared market-data window completed series5m=${series5m.size} series15m=${series15m.size} series1h=${series1h.size} series4h=${series4h.size} series1d=${series1d.size} series1w=${series1w.size} quotes=${quotes.size} xag=${xagQuote ? "available" : "unavailable"} durationMs=${Date.now() - startedAt} at=${new Date().toISOString()}`);
-  return { series5m, series15m, series1h, series4h, series1d, series1w, quotes, xagQuote, xagDirection, xagFresh };
+  console.info(`[Scanner] Shared market-data window completed series5m=${series5m.size} series15m=${series15m.size} series1h=${series1h.size} series4h=${series4h.size} series1d=${series1d.size} series1w=${series1w.size} quotes=${quotes.size} durationMs=${Date.now() - startedAt} at=${new Date().toISOString()}`);
+  return { series5m, series15m, series1h, series4h, series1d, series1w, quotes };
 }
 
 export function parseMarketSeriesCandleAt(series: Pick<MarketSeries, "values" | "fetchedAt">): Date {
@@ -424,17 +408,14 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
   let series1d: Map<string, MarketSeries>;
   let series1w: Map<string, MarketSeries>;
   let quotes: Map<string, V7LiveQuote>;
-  let xagQuote: V7LiveQuote | null | undefined;
-  let xagDirection: "BUY" | "SELL" | null | undefined;
-  let xagFresh = false;
   const marketDataStartedAt = Date.now();
   console.info(`[Scanner] Market-data window ${input?.marketData ? "reused" : "started"} user=${userId} at=${new Date(marketDataStartedAt).toISOString()}`);
   try {
     if (input?.marketDataError) throw new Error(input.marketDataError);
     if (input?.marketData) {
-      ({ series5m, series15m, series1h, series4h, series1d = new Map<string, MarketSeries>(), series1w = new Map<string, MarketSeries>(), quotes, xagQuote, xagDirection, xagFresh = false } = input.marketData);
+      ({ series5m, series15m, series1h, series4h, series1d = new Map<string, MarketSeries>(), series1w = new Map<string, MarketSeries>(), quotes } = input.marketData);
     } else {
-      ({ series5m, series15m, series1h, series4h, series1d, series1w, quotes, xagQuote, xagDirection, xagFresh } = await fetchSharedMarketData());
+      ({ series5m, series15m, series1h, series4h, series1d, series1w, quotes } = await fetchSharedMarketData());
     }
     console.info(`[Scanner] Market-data window ready user=${userId} series15m=${series15m.size} series5m=${series5m.size} series1h=${series1h.size} durationMs=${Date.now() - marketDataStartedAt} at=${new Date().toISOString()}`);
   } catch (error) {
@@ -516,7 +497,7 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
         const series1wForWorkflow = seriesCache.get(`${asset}:1W`);
         const quote = quotes.get(asset);
         const freshness = calculateV7Freshness({ asset, series: series5mForWorkflow ?? series15mForWorkflow ?? series, quote });
-        const v7 = evaluateV7AssetChannel({ asset, timeframe, weekly: series1wForWorkflow, daily: series1dForWorkflow, h4: series4h, h1: series1hForWorkflow, m15: series15mForWorkflow, m5: series5mForWorkflow, freshness, sessionOpen: isWithinV7Session(), xagDirection, xagFresh });
+        const v7 = evaluateV7AssetChannel({ asset, timeframe, weekly: series1wForWorkflow, daily: series1dForWorkflow, h4: series4h, h1: series1hForWorkflow, m15: series15mForWorkflow, m5: series5mForWorkflow, freshness, sessionOpen: isWithinV7Session() });
         const newsEventCandidate = release && asset !== "BTC/USD" ? evaluateV7NewsEvent({ asset: asset as Exclude<typeof asset, "BTC/USD">, event: { title: release.event, date: release.eventTime, actual: release.actual, forecast: release.forecast, impact: release.impact }, m5: series5mForWorkflow, freshness }) : null;
         const workflowIndicators = v7.confirmations.map((observation) => ({ id: observation, observation, direction: v7.direction }));
         const replacementIntelligence = v7.status === "QUALIFIED" ? {

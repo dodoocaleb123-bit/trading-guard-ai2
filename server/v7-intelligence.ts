@@ -78,7 +78,7 @@ export function isWithinV7Session(date = new Date()) {
   return hour >= V7_SESSION.startHourUtc && hour < V7_SESSION.endHourUtc;
 }
 
-export function calculateV7Freshness(input: { asset: string; series?: Pick<MarketSeries, "values" | "fetchedAt"> | null; quote?: V7LiveQuote | null; now?: Date; requireSpread?: boolean }): V7Freshness {
+export function calculateV7Freshness(input: { asset: string; series?: Pick<MarketSeries, "values" | "fetchedAt"> | null; quote?: V7LiveQuote | null; now?: Date }): V7Freshness {
   const nowMs = (input.now ?? new Date()).getTime();
   const quoteFetched = input.quote?.providerTimestamp ? parseAt(input.quote.providerTimestamp) : parseAt(input.quote?.fetchedAt);
   const candleAt = input.series ? latestCompletedCandleAt(input.series) : null;
@@ -89,7 +89,6 @@ export function calculateV7Freshness(input: { asset: string; series?: Pick<Marke
   if (!input.quote || !Number.isFinite(input.quote.price)) reasons.push("live quote unavailable");
   else if (quoteAgeMs == null || quoteAgeMs > quoteLimit) reasons.push(`quote age exceeds ${quoteLimit / 1000}s`);
   if (!input.series || candleAgeMs == null || candleAgeMs > HARD_CANDLE_LAG_MS) reasons.push("latest completed execution candle is stale or unavailable");
-  if (input.requireSpread !== false && (!input.quote || input.quote.bid == null || input.quote.ask == null || input.quote.spread == null || input.quote.spread <= 0)) reasons.push("live bid/ask spread unavailable");
   return { ok: reasons.length === 0, quoteAgeMs, candleAgeMs, spread: input.quote?.spread ?? null, reasons };
 }
 
@@ -114,7 +113,7 @@ function channelName(asset: V7Asset): V7ChannelResult["channel"] {
 
 /**
  * Adapt the existing structural detector into the v7 contract. The detector is
- * deliberately not allowed to invent a plan: provider freshness, session,
+ * deliberately not allowed to invent a plan: quote/candle freshness, session,
  * direction, complete levels, and final 1:2 geometry are all hard gates.
  * News is not inspected here; it is owned by the additive news path.
  */
@@ -138,7 +137,7 @@ export function buildV7ChannelResult(input: {
   const qualified = reasons.length === 0;
   const rationale = qualified
     ? `${input.asset} channel qualified a ${direction} setup from its own structural workflow. News remains additive and did not block this ordinary channel decision. Final RR is 1:${rr}.`
-    : `WAIT: ${reasons.join("; ")}. No missing quote, spread, news, zone, or level evidence was fabricated.`;
+    : `WAIT: ${reasons.join("; ")}. No missing quote, news, zone, or level evidence was fabricated.`;
   return {
     channel: channelName(input.asset), asset: input.asset, timeframe: input.timeframe, status: qualified ? "QUALIFIED" : "WAITING", direction,
     entry: qualified ? input.base.entry ?? null : null, stopLoss: qualified ? input.base.stopLoss ?? null : null, takeProfit: qualified ? input.base.takeProfit ?? null : null,

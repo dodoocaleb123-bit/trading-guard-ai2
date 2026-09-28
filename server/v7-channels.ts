@@ -13,8 +13,6 @@ type ChannelInput = {
   m5?: MarketSeries | null;
   freshness: V7Freshness;
   sessionOpen: boolean;
-  xagDirection?: "BUY" | "SELL" | null;
-  xagFresh?: boolean;
 };
 type Plan = {
   direction: "BUY" | "SELL";
@@ -130,16 +128,14 @@ function baseChecks(input: ChannelInput, required: Array<[string, MarketSeries |
 }
 function evaluateXau(input: ChannelInput): V7ChannelResult {
   const reasons = baseChecks(input, [["Daily", input.daily], ["4H", input.h4], ["1H", input.h1], ["15M", input.m15], ["5M", input.m5]]);
-  if (!input.xagFresh || !input.xagDirection) reasons.push("XAG/USD confirmation is stale, unavailable, or missing");
   if (reasons.length) return wait(input, reasons);
   const wanted = direction(input.m15);
   if (!wanted || direction(input.m5) !== wanted || (!htfAligned(input, wanted, false))) return wait(input, ["XAU requires Daily/4H context with supportive 1H/15M/5M direction"]);
-  if (input.xagDirection !== wanted) return wait(input, ["XAG/USD direction contradicts XAU/USD"]);
   const cs = candles(input.m5), median = bodyMedian(cs), volatility = atr(cs);
   if (!median || !volatility || Math.abs(cs.at(-1)!.close - cs.at(-1)!.open) < 1.5 * median) return wait(input, ["XAU strong displacement standard not met"]);
   if (!location(input.m15, wanted, 0.65)) return wait(input, ["price has not reached the XAU 15M POI inside the active range"]);
   const evidence = sweepBosRetracement(input.m5, wanted);
-  const plan = planFromEvidence(wanted, input.m5, input.m15, evidence, 0.35, ["XAU 15M POI", "5M sweep/rejection", "XAG/USD directional confirmation"], "XAU/USD channel: Daily/4H context → 1H/15M alignment → 15M POI → 5M sweep, displacement, BOS, deep retracement → structural levels. News is additive-only.", 1);
+  const plan = planFromEvidence(wanted, input.m5, input.m15, evidence, 0.35, ["XAU 15M POI", "5M sweep/rejection"], "XAU/USD channel: Daily/4H context → 1H/15M alignment → 15M POI → 5M sweep, displacement, BOS, deep retracement → structural levels. News is additive-only.", 1);
   return plan ? qualified(input, plan) : wait(input, ["XAU POI, liquidity sweep, 5M confirmation, retracement, or realistic 1:2 target is incomplete"]);
 }
 function evaluateBtc(input: ChannelInput): V7ChannelResult {
@@ -218,7 +214,7 @@ export function evaluateV7NewsEvent(input: { asset: Exclude<V7Asset, "BTC/USD">;
 export { candles as v7Candles, direction as v7Direction, atr as v7Atr };
 
 export const v7ChannelContract = {
-  XAU: ["daily-or-4h-context", "1h-15m-alignment", "15m-poi", "5m-sweep-displacement-bos-retracement", "xag-confirmation"],
+  XAU: ["daily-or-4h-context", "1h-15m-alignment", "15m-poi", "5m-sweep-displacement-bos-retracement"],
   BTC: ["1w-1d-4h-context", "1h-activation", "15m-native-break-and-retest", "discount-premium-location", "5m-optional"],
   EUR: ["1w-1d-4h-1h-context", "premium-discount-location", "15m-sweep-choch-bos-retracement"],
   GBP: ["daily-4h-1h-context", "higher-timeframe-poi", "5m-sweep-bos-new-zone-deep-retracement"],

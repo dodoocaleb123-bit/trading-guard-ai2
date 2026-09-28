@@ -9,10 +9,10 @@ describe("v7 intelligence contract", () => {
     expect(isWithinV7Session(new Date("2026-09-20T17:00:00Z"))).toBe(false);
   });
 
-  it("requires live bid/ask spread and fresh quote/candle evidence", () => {
+  it("requires fresh quote and candle evidence without a bid/ask gate", () => {
     const result = calculateV7Freshness({ asset: "EUR/USD", series, quote: { asset: "EUR/USD", price: 1, bid: null, ask: null, spread: null, fetchedAt: "2026-09-20T08:00:00Z" }, now: new Date("2026-09-20T08:00:05Z") });
-    expect(result.ok).toBe(false);
-    expect(result.reasons).toContain("live bid/ask spread unavailable");
+    expect(result.ok).toBe(true);
+    expect(result.reasons).not.toContain("live bid/ask spread unavailable");
   });
 
   it("enforces final RR >= 1:2 and structural direction", () => {
