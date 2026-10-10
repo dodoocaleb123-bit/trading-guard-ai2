@@ -2777,6 +2777,25 @@ function parseV7AuditJson(value: unknown): any {
   try { return JSON.parse(value); } catch { return null; }
 }
 
+const V7_STRATEGIES: Record<string, { timeframe: string; steps: string[] }> = {
+  "XAU/USD": {
+    timeframe: "Daily/4H context → 1H/15M alignment → 5M execution",
+    steps: ["Supportive Daily, 4H, 1H, 15M, and 5M direction", "15M point of interest in the active range", "5M liquidity sweep and strong displacement", "5M body-close BOS/CHoCH", "Retracement into the confirmation zone", "Structural stop, realistic target, and minimum 1:2 RR"],
+  },
+  "BTC/USD": {
+    timeframe: "1W → 1D → 4H → 1H → 15M (15M native signal)",
+    steps: ["Aligned 1W, 1D, 4H, and 1H context", "1H activation break", "Preferred 0–25% discount for BUY or 75–100% premium for SELL", "15M liquidity sweep, BOS/CHoCH, and retracement", "5M may refine but cannot create a signal", "Structural stop, realistic target, and minimum 1:2 RR; no news path"],
+  },
+  "EUR/USD": {
+    timeframe: "1W → 1D → 4H → 1H → 15M (15M native signal)",
+    steps: ["Aligned 1W, 1D, 4H, and 1H direction", "15M meaningful premium/discount location", "15M liquidity sweep", "15M CHoCH/BOS", "Retracement into the confirmation zone", "Structural stop, opposing target, and minimum 1:2 RR; news additive-only"],
+  },
+  "GBP/USD": {
+    timeframe: "Daily → 4H → 1H → 15M → 5M (5M native execution)",
+    steps: ["Aligned Daily, 4H, 1H, 15M, and 5M narrative", "Meaningful higher-timeframe point of interest", "5M liquidity sweep", "5M body-close market shift/BOS", "New imbalance/order-block zone and deep retracement", "Structural stop, opposing target, and minimum 1:2 RR; news additive-only"],
+  },
+};
+
 function V7AuditPage() {
   const decisions = trpc.scanner.decisions.useQuery(undefined, LIVE_QUERY_OPTIONS);
   const rows = (decisions.data ?? []) as V7AuditRow[];
@@ -2813,6 +2832,21 @@ function V7AuditPage() {
           Each card is the newest persisted decision for an asset/timeframe. Green means the evidence was present in that scan; amber means the channel was waiting. News is shown separately and never changes the ordinary channel verdict.
         </CardContent>
       </Card>
+      <section className="mb-6 space-y-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Strategy reference</p>
+          <h2 className="mt-1 font-display text-2xl font-semibold tracking-tight">What each V7 channel must prove</h2>
+          <p className="mt-1 text-sm text-muted-foreground">These are the active frontend-visible requirements. A signal is not emitted until its channel completes its own sequence and the final geometry passes.</p>
+        </div>
+        <div className="grid gap-3 xl:grid-cols-4">
+          {Object.entries(V7_STRATEGIES).map(([asset, strategy]) => (
+            <Card key={asset} className="border-primary/15 bg-card">
+              <CardHeader className="pb-3"><CardTitle className="text-base">{asset}</CardTitle><p className="text-[11px] leading-4 text-muted-foreground">{strategy.timeframe}</p></CardHeader>
+              <CardContent><ol className="space-y-2 text-xs leading-5 text-muted-foreground">{strategy.steps.map((step, index) => <li key={step} className="flex gap-2"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">{index + 1}</span><span>{step}</span></li>)}</ol></CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
       <div className="space-y-4">
         {decisions.isLoading ? <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading the latest channel audit…</CardContent></Card> : null}
         {!decisions.isLoading && !channelRows.length ? <Card><CardContent className="p-6 text-sm text-muted-foreground">No persisted channel decisions are available yet. The first completed scanner cycle will appear here.</CardContent></Card> : null}
@@ -2831,13 +2865,15 @@ function V7AuditPage() {
             detail: item.detail ?? (item.status === "PASS" ? "Rule passed." : item.status === "FAIL" ? "Rule failed." : item.status === "NOT_REACHED" ? "This rule was not reached because an earlier prerequisite failed." : item.status === "WAIT" ? "The channel remains in WAIT." : "This rule was not tested for this scan."),
           })) : [
             { label: "Channel strategy result", pass: qualified, detail: qualified ? "The channel produced a qualified plan." : reason },
-            { label: "Market-data freshness", pass: freshness.ok === true ? true : freshness.ok === false ? false : null, detail: freshness.ok === true ? "Quote and execution candle are fresh." : (freshness.reasons ?? []).join("; ") || "Freshness evidence was not included in this decision." },
+            { label: "Market-data freshness", pass: freshness.ok === true ? true : freshness.ok === false ? false : null, detail: freshness.ok === true ? "Execution candle is fresh; live quote is optional." : (freshness.reasons ?? []).join("; ") || "Freshness evidence was not included in this decision." },
             { label: "Directional structure", pass: v7.direction && v7.direction !== "NEUTRAL", detail: v7.direction ? `Direction: ${v7.direction}` : "No directional structure was confirmed." },
             { label: "POI / liquidity / confirmation", pass: confirmations.length > 0 ? qualified : null, detail: confirmations.length ? confirmations.join(" · ") : "No completed confirmation sequence was recorded." },
             { label: "Executable geometry", pass: qualified && Number(row.generatedEntry ?? v7.entry) > 0, detail: qualified ? `Entry ${row.generatedEntry ?? v7.entry ?? "—"} · SL ${row.generatedStopLoss ?? v7.stopLoss ?? "—"} · TP ${row.generatedTakeProfit ?? v7.takeProfit ?? "—"}` : "Not evaluated because the channel did not qualify." },
             { label: "Hard minimum RR 1:2", pass: qualified && Number(v7.riskReward ?? 0) >= 2 ? true : qualified ? false : null, detail: v7.riskReward ? `Final RR: 1:${v7.riskReward}` : "No final executable ratio recorded." },
             { label: "News policy", pass: true, detail: row.asset === "BTC/USD" ? "BTC is excluded from the news path." : "News is additive-only and did not block this channel decision." },
           ];
+          const failedChecks = checks.filter((check: any) => check.pass === false);
+          const pendingChecks = checks.filter((check: any) => check.pass === null);
           return <Card key={`${row.asset}-${row.timeframe}`} className="overflow-hidden">
             <CardHeader className="border-b bg-muted/20 py-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -2845,6 +2881,7 @@ function V7AuditPage() {
                 <StatusPill status={qualified ? "QUALIFIED" : "WAITING"} />
               </div>
             </CardHeader>
+            {!qualified ? <CardContent className="border-b bg-amber-500/[0.04] px-4 py-3"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-800">Why this scan did not qualify</p><p className="mt-1 text-sm text-foreground">{failedChecks.length ? `Failed requirement${failedChecks.length > 1 ? "s" : ""}: ${failedChecks.map((check: any) => check.label).join(", ")}.` : "No requirement passed to a final qualified plan."}</p>{pendingChecks.length ? <p className="mt-1 text-xs text-muted-foreground">Not reached or not tested: {pendingChecks.map((check: any) => check.label).join(", ")}.</p> : null}<p className="mt-1 text-xs text-muted-foreground">{reason}</p></CardContent> : null}
             <CardContent className="grid gap-2 p-4 md:grid-cols-2">
               {checks.map((check: any) => <div key={check.label} className="flex gap-3 rounded-xl border bg-background p-3"><div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold", check.pass === true ? "bg-emerald-100 text-emerald-700" : check.pass === false ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground")}>{check.pass === true ? "✓" : check.pass === false ? "!" : "–"}</div><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium">{check.label}</p>{check.status ? <Badge variant="outline" className="text-[10px]">{check.status}</Badge> : null}</div><p className="mt-1 text-xs leading-5 text-muted-foreground">{check.detail}</p></div></div>)}
             </CardContent>
