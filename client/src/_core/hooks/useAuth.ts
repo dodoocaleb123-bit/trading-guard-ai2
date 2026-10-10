@@ -1,8 +1,5 @@
-import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { TRPCClientError } from "@trpc/client";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { useCallback, useMemo } from "react";
 
 type UseAuthOptions = {
   redirectOnUnauthenticated?: boolean;
@@ -12,29 +9,8 @@ type UseAuthOptions = {
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
   const utils = trpc.useUtils();
-  const [sessionReady, setSessionReady] = useState(false);
-  const [hasSession, setHasSession] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setHasSession(Boolean(data.session));
-      setSessionReady(true);
-    });
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      setHasSession(Boolean(session));
-      setSessionReady(true);
-      void utils.auth.me.invalidate();
-    });
-    return () => {
-      mounted = false;
-      data.subscription.unsubscribe();
-    };
-  }, [utils]);
-
   const meQuery = trpc.auth.me.useQuery(undefined, {
-    enabled: sessionReady && hasSession,
+    enabled: true,
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -44,35 +20,19 @@ export function useAuth(options?: UseAuthOptions) {
   });
 
   const logout = useCallback(async () => {
-    try {
-      await supabase.auth.signOut();
-      if (hasSession) await logoutMutation.mutateAsync();
-    } catch (error: unknown) {
-      if (!(error instanceof TRPCClientError) || error.data?.code !== "UNAUTHORIZED") throw error;
-    } finally {
-      setHasSession(false);
-      utils.auth.me.setData(undefined, null);
-      await utils.auth.me.invalidate();
-    }
-  }, [hasSession, logoutMutation, utils]);
+    await logoutMutation.mutateAsync();
+    await utils.auth.me.invalidate();
+  }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
     const user = meQuery.data ?? null;
     return {
       user,
-      loading: !sessionReady || (hasSession && meQuery.isLoading) || logoutMutation.isPending,
+      loading: meQuery.isLoading || logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
       isAuthenticated: Boolean(user),
     };
-  }, [hasSession, logoutMutation.error, logoutMutation.isPending, meQuery.data, meQuery.error, meQuery.isLoading, sessionReady]);
-
-  useEffect(() => {
-    if (!redirectOnUnauthenticated || !sessionReady || hasSession || state.user) return;
-    if (typeof window === "undefined") return;
-    if (redirectPath && window.location.pathname === redirectPath) return;
-    if (redirectPath) window.location.href = redirectPath;
-    else void startLogin();
-  }, [hasSession, redirectOnUnauthenticated, redirectPath, sessionReady, state.user]);
+  }, [logoutMutation.error, logoutMutation.isPending, meQuery.data, meQuery.error, meQuery.isLoading]);
 
   return { ...state, refresh: () => meQuery.refetch(), logout };
 }
