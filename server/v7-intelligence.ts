@@ -56,8 +56,7 @@ export type V7ChannelResult = {
   ruleAudit?: V7RuleAudit[];
 };
 
-const HARD_QUOTE_AGE_MS = 15_000;
-const HARD_XAU_QUOTE_AGE_MS = 15_000;
+// Quotes remain optional telemetry; V7 qualification uses execution candles.
 const HARD_XAG_QUOTE_AGE_MS = 30_000;
 const HARD_CANDLE_LAG_MS = 15 * 60_000 + 60_000;
 
@@ -85,9 +84,6 @@ export function calculateV7Freshness(input: { asset: string; series?: Pick<Marke
   const quoteAgeMs = quoteFetched == null ? null : Math.max(0, nowMs - quoteFetched);
   const candleAgeMs = candleAt == null ? null : Math.max(0, nowMs - candleAt);
   const reasons: string[] = [];
-  const quoteLimit = input.asset === "XAU/USD" ? HARD_XAU_QUOTE_AGE_MS : HARD_QUOTE_AGE_MS;
-  if (!input.quote || !Number.isFinite(input.quote.price)) reasons.push("live quote unavailable");
-  else if (quoteAgeMs == null || quoteAgeMs > quoteLimit) reasons.push(`quote age exceeds ${quoteLimit / 1000}s`);
   if (!input.series || candleAgeMs == null || candleAgeMs > HARD_CANDLE_LAG_MS) reasons.push("latest completed execution candle is stale or unavailable");
   return { ok: reasons.length === 0, quoteAgeMs, candleAgeMs, spread: input.quote?.spread ?? null, reasons };
 }
@@ -113,7 +109,7 @@ function channelName(asset: V7Asset): V7ChannelResult["channel"] {
 
 /**
  * Adapt the existing structural detector into the v7 contract. The detector is
- * deliberately not allowed to invent a plan: quote/candle freshness, session,
+ * deliberately not allowed to invent a plan: candle freshness, session,
  * direction, complete levels, and final 1:2 geometry are all hard gates.
  * News is not inspected here; it is owned by the additive news path.
  */
@@ -137,7 +133,7 @@ export function buildV7ChannelResult(input: {
   const qualified = reasons.length === 0;
   const rationale = qualified
     ? `${input.asset} channel qualified a ${direction} setup from its own structural workflow. News remains additive and did not block this ordinary channel decision. Final RR is 1:${rr}.`
-    : `WAIT: ${reasons.join("; ")}. No missing quote, news, zone, or level evidence was fabricated.`;
+    : `WAIT: ${reasons.join("; ")}. No missing candle, news, zone, or level evidence was fabricated.`;
   return {
     channel: channelName(input.asset), asset: input.asset, timeframe: input.timeframe, status: qualified ? "QUALIFIED" : "WAITING", direction,
     entry: qualified ? input.base.entry ?? null : null, stopLoss: qualified ? input.base.stopLoss ?? null : null, takeProfit: qualified ? input.base.takeProfit ?? null : null,
@@ -151,4 +147,4 @@ export function v7NewsEligibleAssets(): V7Asset[] { return ["XAU/USD", "EUR/USD"
 export function isBtcNewsExcluded(asset: string) { return asset === "BTC/USD"; }
 export function v7NewsObservationWindowMinutes(asset: string) { return asset === "XAU/USD" ? 60 : 60; }
 
-export const V7_FRESHNESS_LIMITS = { xauQuoteMs: HARD_XAU_QUOTE_AGE_MS, xagQuoteMs: HARD_XAG_QUOTE_AGE_MS, quoteMs: HARD_QUOTE_AGE_MS, candleLagMs: HARD_CANDLE_LAG_MS } as const;
+export const V7_FRESHNESS_LIMITS = { xagQuoteMs: HARD_XAG_QUOTE_AGE_MS, candleLagMs: HARD_CANDLE_LAG_MS } as const;

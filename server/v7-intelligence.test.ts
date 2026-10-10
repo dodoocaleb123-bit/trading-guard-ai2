@@ -9,9 +9,11 @@ describe("v7 intelligence contract", () => {
     expect(isWithinV7Session(new Date("2026-09-20T17:00:00Z"))).toBe(false);
   });
 
-  it("requires fresh quote and candle evidence without a bid/ask gate", () => {
-    const result = calculateV7Freshness({ asset: "EUR/USD", series, quote: { asset: "EUR/USD", price: 1, bid: null, ask: null, spread: null, fetchedAt: "2026-09-20T08:00:00Z" }, now: new Date("2026-09-20T08:00:05Z") });
+  it("requires a fresh execution candle but does not require a quote or bid/ask", () => {
+    const result = calculateV7Freshness({ asset: "EUR/USD", series, quote: null, now: new Date("2026-09-20T08:00:05Z") });
     expect(result.ok).toBe(true);
+    expect(result.reasons).not.toContain("live quote unavailable");
+    expect(result.reasons).not.toContain("quote age exceeds 15s");
     expect(result.reasons).not.toContain("live bid/ask spread unavailable");
   });
 
