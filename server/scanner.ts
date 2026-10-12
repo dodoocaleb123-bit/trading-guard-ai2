@@ -33,6 +33,15 @@ export function marketIntervalForSignalTimeframe(timeframe: string): "5min" | "1
   return timeframe === "1H" ? "1h" : timeframe === "5MIN" ? "5min" : "15min";
 }
 
+/**
+ * Freshness must follow the asset's native execution timeframe. XAU and GBP
+ * confirm on 5M; BTC and EUR qualify on 15M. A stale optional refinement
+ * series must not block a channel that does not use it to create signals.
+ */
+export function v7FreshnessSeriesForAsset(asset: string, series15m?: MarketSeries | null, series5m?: MarketSeries | null) {
+  return asset === "XAU/USD" || asset === "GBP/USD" ? series5m ?? series15m : series15m ?? series5m;
+}
+
 function precision(asset: string) {
   return asset === "BTC/USD" ? 2 : asset === "XAU/USD" ? 4 : 5;
 }
@@ -496,7 +505,7 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
         const series1dForWorkflow = seriesCache.get(`${asset}:1D`);
         const series1wForWorkflow = seriesCache.get(`${asset}:1W`);
         const quote = quotes.get(asset);
-        const freshness = calculateV7Freshness({ asset, series: series5mForWorkflow ?? series15mForWorkflow ?? series, quote });
+        const freshness = calculateV7Freshness({ asset, series: v7FreshnessSeriesForAsset(asset, series15mForWorkflow, series5mForWorkflow) ?? series, quote });
         const v7 = evaluateV7AssetChannel({ asset, timeframe, weekly: series1wForWorkflow, daily: series1dForWorkflow, h4: series4h, h1: series1hForWorkflow, m15: series15mForWorkflow, m5: series5mForWorkflow, freshness, sessionOpen: isWithinV7Session() });
         const newsEventCandidate = release && asset !== "BTC/USD" ? evaluateV7NewsEvent({ asset: asset as Exclude<typeof asset, "BTC/USD">, event: { title: release.event, date: release.eventTime, actual: release.actual, forecast: release.forecast, impact: release.impact }, m5: series5mForWorkflow, freshness }) : null;
         const workflowIndicators = v7.confirmations.map((observation) => ({ id: observation, observation, direction: v7.direction }));

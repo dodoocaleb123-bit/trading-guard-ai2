@@ -98,7 +98,7 @@ vi.mock("./integrations", () => ({
   sendTelegramMessage,
 }));
 
-import { attachSetupIndicators, compactStrategyContext, isEligibleContradictoryReplacement, marketIntervalForSignalTimeframe, safelyEvaluateBaselineIntelligence, scanAllUsers, scanUser, shouldNotifyScannerSignal } from "./scanner";
+import { attachSetupIndicators, compactStrategyContext, isEligibleContradictoryReplacement, marketIntervalForSignalTimeframe, safelyEvaluateBaselineIntelligence, scanAllUsers, scanUser, shouldNotifyScannerSignal, v7FreshnessSeriesForAsset } from "./scanner";
 
 const series = (symbol: string, interval: "5min" | "15min" | "1h" | "4h") => {
   const values = [{ open: "0.9", high: "1.1", low: "0.8", close: "1" }, { open: "1.9", high: "2.1", low: "1.8", close: "2" }, { open: "2.9", high: "3.1", low: "2.8", close: "3" }];
@@ -113,6 +113,15 @@ const allSeries = () => new Map([
 ]);
 
 describe("scanner context bounds", () => {
+  it("uses native V7 execution timeframe for freshness", () => {
+    const m15 = series("EUR/USD", "15min");
+    const m5 = series("EUR/USD", "5min");
+    expect(v7FreshnessSeriesForAsset("BTC/USD", m15, m5)).toBe(m15);
+    expect(v7FreshnessSeriesForAsset("EUR/USD", m15, m5)).toBe(m15);
+    expect(v7FreshnessSeriesForAsset("XAU/USD", m15, m5)).toBe(m5);
+    expect(v7FreshnessSeriesForAsset("GBP/USD", m15, m5)).toBe(m5);
+  });
+
   it("preserves detected setup indicators for contradiction monitoring", () => {
     const indicators = [{ id: "structure-uptrend", direction: "BUY" as const, strength: "STRONG" }];
     const decision = attachSetupIndicators({ direction: "BUY" as const, market: { close: 100 } }, indicators);
