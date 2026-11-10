@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildV7ChannelResult, calculateV7Freshness, finalRiskReward, isBtcNewsExcluded, isWithinV7Session, qualifiesV7RiskGeometry } from "./v7-intelligence";
+import { buildV7ChannelResult, calculateV7Freshness, finalRiskReward, isBtcNewsExcluded, qualifiesV7RiskGeometry } from "./v7-intelligence";
 
 const series = { fetchedAt: "2026-09-20T08:00:00.000Z", values: [{ datetime: "2026-09-20 07:59:00" }] };
 
 describe("v7 intelligence contract", () => {
-  it("uses the locked 08:00-17:00 UTC session", () => {
-    expect(isWithinV7Session(new Date("2026-09-20T08:00:00Z"))).toBe(true);
-    expect(isWithinV7Session(new Date("2026-09-20T17:00:00Z"))).toBe(false);
+  it("does not impose a UTC session restriction", () => {
+    const result = buildV7ChannelResult({ asset: "EUR/USD", timeframe: "15MIN", strategyQualified: true, freshness: { ok: true, quoteAgeMs: 100, candleAgeMs: 100, spread: null, reasons: [] }, base: { direction: "BUY", entry: 100, stopLoss: 99, takeProfit: 102, confidence: 80, confluenceScore: 70 } });
+    expect(result.status).toBe("QUALIFIED");
+    expect(result.waitReason ?? "").not.toContain("08:00");
   });
 
   it("requires a fresh execution candle but does not require a quote or bid/ask", () => {
@@ -26,13 +27,13 @@ describe("v7 intelligence contract", () => {
 
   it("keeps BTC outside the news-event path and native to 15MIN", () => {
     expect(isBtcNewsExcluded("BTC/USD")).toBe(true);
-    const result = buildV7ChannelResult({ asset: "BTC/USD", timeframe: "5MIN", sessionOpen: true, strategyQualified: true, freshness: { ok: true, quoteAgeMs: 100, candleAgeMs: 100, spread: 1, reasons: [] }, base: { direction: "BUY", entry: 100, stopLoss: 99, takeProfit: 102, confidence: 80, confluenceScore: 70 } });
+    const result = buildV7ChannelResult({ asset: "BTC/USD", timeframe: "5MIN", strategyQualified: true, freshness: { ok: true, quoteAgeMs: 100, candleAgeMs: 100, spread: 1, reasons: [] }, base: { direction: "BUY", entry: 100, stopLoss: 99, takeProfit: 102, confidence: 80, confluenceScore: 70 } });
     expect(result.status).toBe("WAITING");
     expect(result.waitReason).toContain("native signal timeframe is 15MIN");
   });
 
   it("does not let ordinary news status block a qualified channel", () => {
-    const result = buildV7ChannelResult({ asset: "EUR/USD", timeframe: "15MIN", sessionOpen: true, strategyQualified: true, freshness: { ok: true, quoteAgeMs: 100, candleAgeMs: 100, spread: 0.0001, reasons: [] }, base: { direction: "BUY", entry: 100, stopLoss: 99, takeProfit: 102, confidence: 80, confluenceScore: 70 } });
+    const result = buildV7ChannelResult({ asset: "EUR/USD", timeframe: "15MIN", strategyQualified: true, freshness: { ok: true, quoteAgeMs: 100, candleAgeMs: 100, spread: 0.0001, reasons: [] }, base: { direction: "BUY", entry: 100, stopLoss: 99, takeProfit: 102, confidence: 80, confluenceScore: 70 } });
     expect(result.status).toBe("QUALIFIED");
     expect(result.ordinaryNewsPolicy).toBe("ADDITIVE_ONLY");
   });

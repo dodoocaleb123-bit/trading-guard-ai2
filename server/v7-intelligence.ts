@@ -7,7 +7,6 @@ export const V7_GENERATION_MODE = "V7_INTELLIGENCE" as const;
 export const V7_NEWS_EVENT_GENERATION_MODE = "V7_NEWS_EVENT" as const;
 export const V7_SIGNAL_TIMEFRAMES = ["15MIN", "5MIN"] as const;
 export const V7_HIERARCHY = ["1W", "1D", "4H", "1H", "15M"] as const;
-export const V7_SESSION = { startHourUtc: 8, endHourUtc: 17 } as const;
 export const V7_ASSETS = ["XAU/USD", "BTC/USD", "EUR/USD", "GBP/USD"] as const;
 
 export type V7Asset = (typeof V7_ASSETS)[number];
@@ -72,11 +71,6 @@ export function latestCompletedCandleAt(series: Pick<MarketSeries, "values" | "f
   return parseAt(latest?.datetime) ?? parseAt(series.fetchedAt);
 }
 
-export function isWithinV7Session(date = new Date()) {
-  const hour = date.getUTCHours();
-  return hour >= V7_SESSION.startHourUtc && hour < V7_SESSION.endHourUtc;
-}
-
 export function calculateV7Freshness(input: { asset: string; series?: Pick<MarketSeries, "values" | "fetchedAt"> | null; quote?: V7LiveQuote | null; now?: Date }): V7Freshness {
   const nowMs = (input.now ?? new Date()).getTime();
   const quoteFetched = input.quote?.providerTimestamp ? parseAt(input.quote.providerTimestamp) : parseAt(input.quote?.fetchedAt);
@@ -109,8 +103,9 @@ function channelName(asset: V7Asset): V7ChannelResult["channel"] {
 
 /**
  * Adapt the existing structural detector into the v7 contract. The detector is
- * deliberately not allowed to invent a plan: candle freshness, session,
- * direction, complete levels, and final 1:2 geometry are all hard gates.
+ * deliberately not allowed to invent a plan: candle freshness, direction,
+ * complete levels, and final 1:2 geometry are all hard gates. Session activity
+ * is not an entry restriction.
  * News is not inspected here; it is owned by the additive news path.
  */
 export function buildV7ChannelResult(input: {
@@ -119,13 +114,11 @@ export function buildV7ChannelResult(input: {
   base: { direction?: string; entry?: number | null; stopLoss?: number | null; takeProfit?: number | null; confidence?: number; confluenceScore?: number; adjustments?: string; ruleEvidence?: string[]; zones?: WorkflowZone[]; fundamentalContext?: FundamentalContext | null };
   freshness: V7Freshness;
   strategyQualified?: boolean;
-  sessionOpen?: boolean;
   confirmations?: string[];
 }): V7ChannelResult {
   const direction = input.base.direction === "BUY" || input.base.direction === "SELL" ? input.base.direction : "NEUTRAL";
   const rr = finalRiskReward(input.base.entry ?? null, input.base.stopLoss ?? null, input.base.takeProfit ?? null);
   const reasons = [...input.freshness.reasons];
-  if (input.sessionOpen === false) reasons.push("outside the configured 08:00–17:00 UTC entry session");
   if (direction === "NEUTRAL") reasons.push("asset channel has no directional structure");
   if (input.asset === "BTC/USD" && input.timeframe !== "15MIN") reasons.push("BTC/USD native signal timeframe is 15MIN; 5MIN may only refine an existing 15MIN setup");
   if (input.strategyQualified === false) reasons.push("asset-specific channel workflow is not qualified");

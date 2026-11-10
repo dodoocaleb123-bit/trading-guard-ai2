@@ -14,7 +14,7 @@ import { detectPaperTradeContradiction } from "./paper-trade-adjustments";
 import { buildUpgradePaperAdjustmentReason, buildUpgradeTelegramDedupeKey, compareStrongerSameDirectionSetup } from "./paper-trade-upgrades";
 import { fetchMarketSeries, fetchMarketSeriesBatch, fetchMarketSnapshot, fetchStrategyRulesFromSupabase, forensicAnalysis, formatApprovedTelegramMessage, formatOutcomeTelegramMessage, formatPaperTradeAdjustmentTelegramMessage, formatPaperTradeContradictionWarningTelegramMessage, formatPaperTradeUpgradeTelegramMessage, formatAuditResult, generateScannerDecisions, mirrorToSupabase, normalizeForensicFinding, sendTelegramMessage, type MarketSeries, type MarketSnapshot } from "./integrations";
 import { notifyOwner } from "./_core/notification";
-import { buildV7ChannelResult, calculateV7Freshness, V7_GENERATION_MODE, V7_INTELLIGENCE_VERSION, V7_NEWS_EVENT_GENERATION_MODE, isWithinV7Session, type V7LiveQuote } from "./v7-intelligence";
+import { buildV7ChannelResult, calculateV7Freshness, V7_GENERATION_MODE, V7_INTELLIGENCE_VERSION, V7_NEWS_EVENT_GENERATION_MODE, type V7LiveQuote } from "./v7-intelligence";
 import { buildV7NewsObservations } from "./v7-news";
 import { evaluateV7AssetChannel, evaluateV7NewsEvent, type V7NewsEventCandidate } from "./v7-channels";
 
@@ -506,7 +506,7 @@ export async function scanUser(userId: number, input?: ScanUserInput): Promise<S
         const series1wForWorkflow = seriesCache.get(`${asset}:1W`);
         const quote = quotes.get(asset);
         const freshness = calculateV7Freshness({ asset, series: v7FreshnessSeriesForAsset(asset, series15mForWorkflow, series5mForWorkflow) ?? series, quote });
-        const v7 = evaluateV7AssetChannel({ asset, timeframe, weekly: series1wForWorkflow, daily: series1dForWorkflow, h4: series4h, h1: series1hForWorkflow, m15: series15mForWorkflow, m5: series5mForWorkflow, freshness, sessionOpen: isWithinV7Session() });
+        const v7 = evaluateV7AssetChannel({ asset, timeframe, weekly: series1wForWorkflow, daily: series1dForWorkflow, h4: series4h, h1: series1hForWorkflow, m15: series15mForWorkflow, m5: series5mForWorkflow, freshness });
         const newsEventCandidate = release && asset !== "BTC/USD" ? evaluateV7NewsEvent({ asset: asset as Exclude<typeof asset, "BTC/USD">, event: { title: release.event, date: release.eventTime, actual: release.actual, forecast: release.forecast, impact: release.impact }, m5: series5mForWorkflow, freshness }) : null;
         const workflowIndicators = v7.confirmations.map((observation) => ({ id: observation, observation, direction: v7.direction }));
         const replacementIntelligence = v7.status === "QUALIFIED" ? {

@@ -12,7 +12,7 @@ function series(symbol: string, interval: MarketSeries["interval"], bias: "BUY" 
 }
 const fresh: V7Freshness = { ok: true, quoteAgeMs: 1000, candleAgeMs: 1000, spread: 0.01, reasons: [] };
 function common(asset: "XAU/USD" | "BTC/USD" | "EUR/USD" | "GBP/USD", timeframe: string) {
-  return { asset, timeframe, weekly: series(asset, "1week", "BUY"), daily: series(asset, "1day", "BUY"), h4: series(asset, "4h", "BUY"), h1: series(asset, "1h", "BUY"), m15: series(asset, "15min", "BUY"), m5: series(asset, "5min", "BUY"), freshness: fresh, sessionOpen: true } as const;
+  return { asset, timeframe, weekly: series(asset, "1week", "BUY"), daily: series(asset, "1day", "BUY"), h4: series(asset, "4h", "BUY"), h1: series(asset, "1h", "BUY"), m15: series(asset, "15min", "BUY"), m5: series(asset, "5min", "BUY"), freshness: fresh } as const;
 }
 
 describe("v7 independent channels", () => {

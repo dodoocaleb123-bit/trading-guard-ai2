@@ -12,7 +12,6 @@ type ChannelInput = {
   m15?: MarketSeries | null;
   m5?: MarketSeries | null;
   freshness: V7Freshness;
-  sessionOpen: boolean;
 };
 type Plan = {
   direction: "BUY" | "SELL";
@@ -122,7 +121,6 @@ function qualified(input: ChannelInput, plan: Plan): V7ChannelResult {
 }
 function baseChecks(input: ChannelInput, required: Array<[string, MarketSeries | null | undefined]>) {
   const reasons = [...input.freshness.reasons];
-  if (!input.sessionOpen) reasons.push("outside configured 08:00–17:00 UTC entry session");
   for (const [name, series] of required) if (!series) reasons.push(`${name} data unavailable`);
   return reasons;
 }
